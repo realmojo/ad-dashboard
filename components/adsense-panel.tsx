@@ -148,11 +148,14 @@ export async function AdSensePanel({ date }: { date?: string } = {}) {
           </CardHeader>
           <CardContent className="space-y-1 text-sm text-muted-foreground">
             <p>
-              최초 1회 인증이 필요합니다: <code>npm run adsense:auth</code>
+              로컬에서는 <code>npm run adsense:auth</code> 로 최초 1회 인증하면{" "}
+              <code>.env</code> 에 <code>ADSENSE_REFRESH_TOKEN</code> 이
+              저장됩니다.
             </p>
             <p>
-              인증 후 <code>.env</code> 에 <code>ADSENSE_REFRESH_TOKEN</code> 이
-              저장되면 dev 서버를 재시작하세요.
+              배포 환경에서는 같은 값을 시크릿으로 등록해야 합니다 (
+              <code>npm run cf:secrets</code>). refresh token 은 기기가 아니라
+              구글 계정에 묶여 있어 로컬 값을 그대로 쓰면 됩니다.
             </p>
           </CardContent>
         </Card>
