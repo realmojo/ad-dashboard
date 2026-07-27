@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { rpmToneClass } from "@/lib/adsense-format"
-import { Ga4Error, getPageRevenue, type PageRevenueRow } from "@/lib/ga4"
+import { getPageRevenue, type PageRevenueRow } from "@/lib/ga4"
 import { describeError } from "@/lib/describe-error"
 import { cn } from "@/lib/utils"
 

@@ -7,11 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { describeError } from "@/lib/describe-error"
-import {
-  AdSenseError,
-  generateSavedReport,
-  type DateRange,
-} from "@/lib/adsense"
+import { generateSavedReport, type DateRange } from "@/lib/adsense"
 import type { ReportHeader } from "@/lib/adsense-format"
 
 interface Props {
