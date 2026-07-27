@@ -1,6 +1,3 @@
-import { readFileSync, readdirSync } from "node:fs"
-import { join } from "node:path"
-
 const TOKEN_URI = "https://oauth2.googleapis.com/token"
 
 export class GoogleAuthError extends Error {
@@ -18,60 +15,32 @@ export class GoogleAuthError extends Error {
 export interface OAuthClient {
   clientId: string
   clientSecret: string
-  redirectUri: string
 }
 
 /**
- * Google Cloud Console 에서 받은 OAuth 클라이언트 JSON 을 읽는다.
- * GOOGLE_OAUTH_CLIENT_FILE 로 경로를 지정할 수 있고,
- * 없으면 프로젝트 루트의 client_secret*.json 을 찾는다.
+ * OAuth 클라이언트 자격증명.
+ *
+ * Cloudflare Workers 에는 파일시스템이 없으므로 환경변수만 사용한다.
+ * 값은 Google Cloud Console 에서 받은 client_secret*.json 의
+ * installed.client_id / installed.client_secret 이다.
  */
 export function loadOAuthClient(): OAuthClient {
-  const explicit = process.env.GOOGLE_OAUTH_CLIENT_FILE
-  let path = explicit
+  const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID?.trim()
+  const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET?.trim()
 
-  if (!path) {
-    const root = process.cwd()
-    const found = readdirSync(root).find(
-      (name) => name.startsWith("client_secret") && name.endsWith(".json")
-    )
-    if (found) path = join(root, found)
-  }
+  const missing = [
+    !clientId && "GOOGLE_OAUTH_CLIENT_ID",
+    !clientSecret && "GOOGLE_OAUTH_CLIENT_SECRET",
+  ].filter(Boolean)
 
-  if (!path) {
+  if (missing.length > 0) {
     throw new GoogleAuthError(
-      "OAuth 클라이언트 JSON 을 찾을 수 없습니다. GOOGLE_OAUTH_CLIENT_FILE 을 설정하거나 프로젝트 루트에 client_secret*.json 을 두세요.",
+      `구글 OAuth 환경변수가 없습니다: ${missing.join(", ")}. client_secret*.json 의 client_id / client_secret 을 넣어 주세요.`,
       500
     )
   }
 
-  let parsed: Record<string, unknown>
-  try {
-    parsed = JSON.parse(readFileSync(path, "utf8"))
-  } catch {
-    throw new GoogleAuthError(
-      `OAuth 클라이언트 JSON 을 읽지 못했습니다: ${path}`,
-      500
-    )
-  }
-
-  // 데스크톱 앱은 "installed", 웹 앱은 "web" 키 아래에 값이 들어있다.
-  const config = (parsed.installed ?? parsed.web) as
-    | { client_id?: string; client_secret?: string; redirect_uris?: string[] }
-    | undefined
-
-  if (!config?.client_id || !config.client_secret) {
-    throw new GoogleAuthError(
-      `OAuth 클라이언트 JSON 형식이 올바르지 않습니다: ${path}`,
-      500
-    )
-  }
-
-  return {
-    clientId: config.client_id,
-    clientSecret: config.client_secret,
-    redirectUri: config.redirect_uris?.[0] ?? "http://localhost",
-  }
+  return { clientId: clientId!, clientSecret: clientSecret! }
 }
 
 let cachedToken: { value: string; expiresAt: number } | null = null

@@ -39,3 +39,8 @@ next-env.d.ts
 # Google OAuth 클라이언트 시크릿
 client_secret*.json
 *-service-account.json
+
+# Cloudflare
+.open-next/
+.wrangler/
+worker-configuration.d.ts

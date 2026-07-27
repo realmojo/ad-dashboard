@@ -4,8 +4,10 @@ import { AdSensePanel } from "@/components/adsense-panel"
 import { DatePicker } from "@/components/date-picker"
 import { NaverAdPanel } from "@/components/naver-ad-panel"
 import { ProfitSummary } from "@/components/profit-summary"
+import { LoginScreen } from "@/components/login-screen"
 import { RefreshControl } from "@/components/refresh-control"
 import { todayInSeoul } from "@/lib/naver-ad"
+import { getSession } from "@/lib/session"
 
 export const dynamic = "force-dynamic"
 
@@ -28,9 +30,14 @@ function PanelSkeleton({ title }: { title: string }) {
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string }>
+  searchParams: Promise<{ date?: string; error?: string }>
 }) {
-  const { date: raw } = await searchParams
+  const { date: raw, error } = await searchParams
+
+  // 허용된 구글 계정으로 로그인해야 대시보드를 보여준다.
+  const session = await getSession()
+  if (!session) return <LoginScreen error={error} />
+
   const today = todayInSeoul()
   // 형식이 어긋나거나 미래 날짜면 오늘로 되돌린다.
   const date = raw && DATE_FORMAT.test(raw) && raw <= today ? raw : today
