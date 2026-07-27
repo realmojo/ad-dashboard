@@ -64,10 +64,13 @@ async function runReport(
   const body = await response.json().catch(() => null)
 
   if (!response.ok) {
-    const message =
-      (body as { error?: { message?: string } } | null)?.error?.message ??
-      "GA4 리포트 조회 실패"
-    throw new Ga4Error(message, response.status, body)
+    const detail = (body as { error?: { message?: string } } | null)?.error
+      ?.message
+    throw new Ga4Error(
+      `GA4 API 오류 (HTTP ${response.status})${detail ? ` — ${detail}` : ""}`,
+      response.status,
+      body
+    )
   }
 
   return body as RunReportResponse

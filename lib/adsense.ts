@@ -91,10 +91,13 @@ async function apiGet<T>(
   const body = await response.json().catch(() => null)
 
   if (!response.ok) {
-    const message =
-      (body as { error?: { message?: string } } | null)?.error?.message ??
-      `AdSense API 요청 실패 (${path})`
-    throw new AdSenseError(message, response.status, body)
+    const detail = (body as { error?: { message?: string } } | null)?.error
+      ?.message
+    throw new AdSenseError(
+      `애드센스 API 오류 (HTTP ${response.status} · ${path})${detail ? ` — ${detail}` : ""}`,
+      response.status,
+      body
+    )
   }
 
   return body as T

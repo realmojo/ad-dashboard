@@ -82,8 +82,14 @@ export async function getAccessToken(): Promise<string> {
   }
 
   if (!response.ok || !body.access_token) {
+    // 어느 단계에서 막혔는지 알 수 있게 사유를 그대로 노출한다.
+    const reason = [body.error, body.error_description]
+      .filter(Boolean)
+      .join(": ")
     throw new GoogleAuthError(
-      body.error_description ?? body.error ?? "access token 발급 실패",
+      `구글 토큰 발급 실패 (HTTP ${response.status}${reason ? ` · ${reason}` : ""}). ` +
+        "GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET 가 " +
+        "ADSENSE_REFRESH_TOKEN 을 발급한 클라이언트와 같은지 확인하세요.",
       response.status,
       body
     )
