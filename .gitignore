@@ -44,3 +44,4 @@ client_secret*.json
 .open-next/
 .wrangler/
 worker-configuration.d.ts
+.cf-secrets.tmp.json
