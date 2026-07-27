@@ -2,7 +2,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "ad-dashboard",
   "main": ".open-next/worker.js",
-  "compatibility_date": "2026-07-28",
+  // UTC 기준으로 과거 날짜여야 한다. 미래로 두면 배포가 거부된다.
+  "compatibility_date": "2026-07-20",
   // node:crypto 등 Node 내장 모듈을 쓰므로 필요하다.
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
