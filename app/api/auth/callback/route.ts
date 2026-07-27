@@ -79,7 +79,13 @@ export async function GET(request: NextRequest) {
   } | null
 
   if (!tokenResponse.ok || !token?.id_token) {
-    return deny(origin, token?.error_description ?? "토큰 교환에 실패했습니다.")
+    // client_id 는 비밀값이 아니므로, 어느 클라이언트로 시도했는지 함께 보여준다.
+    // ID 와 시크릿의 짝이 어긋난 경우를 바로 알아채기 위함이다.
+    const reason = token?.error_description ?? "토큰 교환에 실패했습니다."
+    return deny(
+      origin,
+      `${reason} (사용한 클라이언트: ${clientId.split("-")[0]}-${clientId.split("-")[1]?.slice(0, 6)}…)`
+    )
   }
 
   const email = readIdTokenEmail(token.id_token)
