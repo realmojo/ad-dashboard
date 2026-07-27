@@ -33,6 +33,7 @@ import { getUsdKrwRate } from "@/lib/fx"
 import { PANEL_CARD_HEIGHT } from "@/lib/layout"
 import { todayInSeoul } from "@/lib/naver-ad"
 import { getUrlCostMap } from "@/lib/url-cost"
+import { describeError } from "@/lib/describe-error"
 import { cn } from "@/lib/utils"
 
 /**
@@ -90,10 +91,10 @@ export async function AdSensePanel({ date }: { date?: string } = {}) {
       )
     }
   } catch (error) {
-    errorMessage =
-      error instanceof AdSenseError
-        ? error.message
-        : "애드센스 보고서를 가져오지 못했습니다."
+    errorMessage = describeError(
+      error,
+      "애드센스 보고서를 가져오지 못했습니다."
+    )
   }
 
   const label = date ?? "오늘"

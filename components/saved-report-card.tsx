@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { describeError } from "@/lib/describe-error"
 import {
   AdSenseError,
   generateSavedReport,
@@ -62,10 +63,10 @@ export async function SavedReportCard({
       ? headers.map((_, i) => report.totals!.cells[i]?.value ?? "")
       : null
   } catch (error) {
-    errorMessage =
-      error instanceof AdSenseError
-        ? error.message
-        : `"${title}" 보고서를 가져오지 못했습니다.`
+    errorMessage = describeError(
+      error,
+      `"${title}" 보고서를 가져오지 못했습니다.`
+    )
   }
 
   // 표가 없으면 헤더의 필터·합계도 의미가 없으므로 단순 카드로 끝낸다.

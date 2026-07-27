@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table"
 import { rpmToneClass } from "@/lib/adsense-format"
 import { Ga4Error, getPageRevenue, type PageRevenueRow } from "@/lib/ga4"
+import { describeError } from "@/lib/describe-error"
 import { cn } from "@/lib/utils"
 
 const usd = new Intl.NumberFormat("ko-KR", {
@@ -51,10 +52,10 @@ export async function Ga4PagesCard({
     rows = result.rows
     totalRows = result.totalRows
   } catch (error) {
-    errorMessage =
-      error instanceof Ga4Error
-        ? error.message
-        : "GA4 페이지별 수익을 가져오지 못했습니다."
+    errorMessage = describeError(
+      error,
+      "GA4 페이지별 수익을 가져오지 못했습니다."
+    )
   }
 
   const totalRevenue = rows.reduce((sum, r) => sum + r.revenue, 0)
