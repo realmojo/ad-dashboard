@@ -30,7 +30,12 @@ pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env*.example
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Google OAuth 클라이언트 시크릿
+client_secret*.json
+*-service-account.json

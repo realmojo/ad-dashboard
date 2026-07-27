@@ -1,19 +1,80 @@
-import { Button } from "@/components/ui/button"
+import { Suspense } from "react"
 
-export default function Page() {
+import { AdSensePanel } from "@/components/adsense-panel"
+import { DatePicker } from "@/components/date-picker"
+import { NaverAdPanel } from "@/components/naver-ad-panel"
+import { ProfitSummary } from "@/components/profit-summary"
+import { RefreshControl } from "@/components/refresh-control"
+import { todayInSeoul } from "@/lib/naver-ad"
+
+export const dynamic = "force-dynamic"
+
+const DATE_FORMAT = /^\d{4}-\d{2}-\d{2}$/
+
+function PanelSkeleton({ title }: { title: string }) {
   return (
-    <div className="flex min-h-svh p-6">
-      <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
-        <div>
-          <h1 className="font-medium">Project ready!</h1>
-          <p>You may now add components and start building.</p>
-          <p>We&apos;ve already added the button component for you.</p>
-          <Button className="mt-2">Button</Button>
-        </div>
-        <div className="font-mono text-xs text-muted-foreground">
-          (Press <kbd>d</kbd> to toggle dark mode)
-        </div>
+    <section className="min-w-0 space-y-4">
+      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="h-20 animate-pulse rounded-xl bg-muted" />
+        ))}
       </div>
-    </div>
+      <div className="h-64 animate-pulse rounded-xl bg-muted" />
+    </section>
+  )
+}
+
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string }>
+}) {
+  const { date: raw } = await searchParams
+  const today = todayInSeoul()
+  // 형식이 어긋나거나 미래 날짜면 오늘로 되돌린다.
+  const date = raw && DATE_FORMAT.test(raw) && raw <= today ? raw : today
+
+  return (
+    <main className="mx-auto w-full max-w-[110rem] space-y-6 p-6">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">대시보드</h1>
+          <p className="text-sm text-muted-foreground">
+            네이버 검색광고와 구글 애드센스 성과
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* 두 API 를 모두 기다리므로 헤더 렌더를 막지 않도록 따로 스트리밍한다. */}
+          <Suspense
+            key={`profit-${date}`}
+            fallback={
+              <div className="h-11 w-72 animate-pulse rounded-lg bg-muted" />
+            }
+          >
+            <ProfitSummary date={date} />
+          </Suspense>
+          <DatePicker date={date} today={today} />
+          <RefreshControl />
+        </div>
+      </header>
+
+      {/* 5:5 분할. 각 패널은 독립적으로 스트리밍되어 한쪽이 느려도 다른 쪽이 먼저 표시된다. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* key 에 날짜를 넣어 날짜가 바뀌면 스켈레톤부터 다시 보이게 한다. */}
+        <Suspense
+          key={`naver-${date}`}
+          fallback={<PanelSkeleton title="네이버 파워링크" />}
+        >
+          <NaverAdPanel date={date} />
+        </Suspense>
+        <Suspense
+          key={`adsense-${date}`}
+          fallback={<PanelSkeleton title="애드센스 보고서" />}
+        >
+          <AdSensePanel date={date} />
+        </Suspense>
+      </div>
+    </main>
   )
 }
