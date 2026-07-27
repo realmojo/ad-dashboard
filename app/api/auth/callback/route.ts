@@ -6,6 +6,7 @@ import {
   getLoginClient,
   isAllowedEmail,
 } from "@/lib/auth"
+import { getCallbackUrl, getPublicOrigin } from "@/lib/origin"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -36,7 +37,7 @@ function deny(origin: string, reason: string) {
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
-  const origin = url.origin
+  const origin = getPublicOrigin(request)
 
   if (url.searchParams.get("error")) {
     return deny(origin, "로그인이 취소되었습니다.")
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
       code,
       client_id: clientId,
       client_secret: clientSecret,
-      redirect_uri: `${origin}/api/auth/callback`,
+      redirect_uri: getCallbackUrl(request),
       grant_type: "authorization_code",
     }),
   })

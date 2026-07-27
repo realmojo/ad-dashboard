@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 
 import { SESSION_COOKIE, verifySessionValue } from "@/lib/auth"
+import { getPublicOrigin } from "@/lib/origin"
 
 /**
  * 로그인하지 않은 접근을 막는다.
@@ -13,12 +14,12 @@ export async function middleware(request: NextRequest) {
   )
   if (session) return NextResponse.next()
 
-  const { pathname, origin } = new URL(request.url)
+  const { pathname } = new URL(request.url)
 
   if (pathname.startsWith("/api/")) {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 })
   }
-  return NextResponse.redirect(origin)
+  return NextResponse.redirect(getPublicOrigin(request))
 }
 
 export const config = {

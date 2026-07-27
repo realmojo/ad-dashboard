@@ -1,13 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server"
 
 import { getLoginClient } from "@/lib/auth"
+import { getCallbackUrl, getPublicOrigin } from "@/lib/origin"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 /** 구글 동의 화면으로 보낸다. */
 export async function GET(request: NextRequest) {
-  const { origin } = new URL(request.url)
+  const origin = getPublicOrigin(request)
 
   let clientId: string
   try {
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
 
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: `${origin}/api/auth/callback`,
+    redirect_uri: getCallbackUrl(request),
     response_type: "code",
     scope: "openid email profile",
     // 계정 선택 화면을 항상 띄워 다른 계정으로 바꾸기 쉽게 한다.
