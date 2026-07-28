@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { getDomainEarnings } from "@/lib/adsense"
 import { rpmToneClass } from "@/lib/adsense-format"
 import { getPageRevenue, type PageRevenueRow } from "@/lib/ga4"
 import { describeError } from "@/lib/describe-error"
@@ -46,11 +47,18 @@ export async function Ga4PagesCard({
   let rows: PageRevenueRow[] = []
   let totalRows = 0
   let errorMessage: string | null = null
+  // 애드센스 실제 수익. GA4 가 얼마나 반영했는지 대조하는 기준.
+  let adsenseTotal: number | null = null
 
   try {
-    const result = await getPageRevenue({ date, hosts, limit })
+    const [result, adsense] = await Promise.all([
+      getPageRevenue({ date, hosts, limit }),
+      // 대조값을 못 받아도 표는 보여준다.
+      getDomainEarnings(date, hosts).catch(() => null),
+    ])
     rows = result.rows
     totalRows = result.totalRows
+    adsenseTotal = adsense?.total ?? null
   } catch (error) {
     errorMessage = describeError(
       error,
@@ -62,6 +70,13 @@ export async function Ga4PagesCard({
   const totalPageViews = rows.reduce((sum, r) => sum + r.pageViews, 0)
   const totalRpm =
     totalPageViews > 0 ? (totalRevenue / totalPageViews) * 1000 : 0
+
+  // GA4 는 페이지뷰 이벤트에 수익을 붙이는 방식이라 애드센스보다 적게 잡히고,
+  // 당일 데이터는 아직 처리 중이라 특히 낮다.
+  const coverage =
+    adsenseTotal && adsenseTotal > 0
+      ? (totalRevenue / adsenseTotal) * 100
+      : null
 
   const description = errorMessage
     ? "불러오기 실패"
@@ -88,6 +103,21 @@ export async function Ga4PagesCard({
               <span className="text-lg font-bold tabular-nums">
                 {usd.format(totalRevenue)}
               </span>
+              {coverage !== null ? (
+                <span
+                  className={cn(
+                    "text-xs font-medium tabular-nums",
+                    coverage >= 90
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : coverage >= 70
+                        ? "text-amber-600 dark:text-amber-500"
+                        : "text-red-600 dark:text-red-400"
+                  )}
+                  title={`애드센스 실제 수익 ${usd.format(adsenseTotal!)} 대비`}
+                >
+                  애드센스 대비 {Math.round(coverage)}%
+                </span>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -95,6 +125,14 @@ export async function Ga4PagesCard({
           {description}
           {!errorMessage ? ` · ${hosts.join(", ")}` : ""}
         </CardDescription>
+        {coverage !== null && coverage < 90 ? (
+          <p className="text-xs text-amber-600 dark:text-amber-500">
+            애드센스 실제 수익은 {usd.format(adsenseTotal!)} 입니다. GA4 는
+            페이지뷰 이벤트에 수익을 붙이는 방식이라 항상 적게 잡히고, 당일
+            데이터는 처리 중이라 특히 낮습니다. 절대 금액보다 페이지 간 비교에
+            쓰는 편이 안전합니다.
+          </p>
+        ) : null}
       </CardHeader>
 
       <CardContent className={cn(height && "min-h-0 flex-1")}>

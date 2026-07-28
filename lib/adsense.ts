@@ -239,6 +239,38 @@ export function generateSavedReport(
   })
 }
 
+/**
+ * 지정한 도메인들의 애드센스 실제 수익(USD).
+ * GA4 수치가 얼마나 반영됐는지 대조하는 기준값으로 쓴다.
+ */
+export async function getDomainEarnings(
+  date: string,
+  domains: readonly string[]
+): Promise<{ total: number; byDomain: Map<string, number> }> {
+  const accounts = await listAccounts()
+  const account = accounts[0]?.name
+  const byDomain = new Map<string, number>()
+  if (!account) return { total: 0, byDomain }
+
+  const report = await generateReport(account, {
+    date,
+    metrics: ["ESTIMATED_EARNINGS"],
+    dimensions: ["DOMAIN_NAME"],
+    limit: 200,
+  })
+
+  const wanted = new Set(domains)
+  let total = 0
+  for (const row of report.rows ?? []) {
+    const domain = row.cells[0]?.value ?? ""
+    if (!wanted.has(domain)) continue
+    const amount = Number(row.cells[1]?.value ?? 0) || 0
+    byDomain.set(domain, amount)
+    total += amount
+  }
+  return { total, byDomain }
+}
+
 /** 보고서 결과를 헤더 이름을 키로 하는 객체 배열로 변환한다. */
 export function toRecords(report: ReportResult) {
   const headers = report.headers?.map((h) => h.name) ?? []
