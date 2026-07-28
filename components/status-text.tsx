@@ -49,7 +49,8 @@ export function StatusDot({
       aria-label={label}
       role="img"
       className={cn(
-        "inline-block size-2.5 shrink-0 rounded-full",
+        // 10px 였던 것을 절반으로. 임의값을 써야 정확히 5px 가 된다.
+        "inline-block size-[5px] shrink-0 rounded-full",
         ok ? "bg-emerald-500" : "bg-red-500",
         className
       )}
