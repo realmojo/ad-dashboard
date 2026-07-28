@@ -14,7 +14,8 @@
     "cf:build": "opennextjs-cloudflare build",
     "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "cf:deploy": "opennextjs-cloudflare deploy",
-    "cf:secrets": "node scripts/push-secrets.mjs"
+    "cf:secrets": "node scripts/push-secrets.mjs",
+    "check:oauth": "node scripts/check-oauth-client.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
