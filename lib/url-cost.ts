@@ -55,6 +55,8 @@ export interface UrlCost {
   clkCnt: number
   /** 이 URL 로 연결되는 광고그룹 이름들 */
   adgroupNames: string[]
+  /** 연결된 광고그룹 중 하나라도 노출 중이면 true */
+  running: boolean
 }
 
 /**
@@ -68,7 +70,9 @@ export async function getUrlCostMap(
 
   const [urlsByAdgroup, campaigns] = await Promise.all([
     getAdGroupUrls(),
-    getCampaigns().then((list) => list.filter((c) => c.campaignTp === "WEB_SITE")),
+    getCampaigns().then((list) =>
+      list.filter((c) => c.campaignTp === "WEB_SITE")
+    ),
   ])
 
   const adgroups = (
@@ -89,15 +93,19 @@ export async function getUrlCostMap(
     const stat = stats.get(adgroup.nccAdgroupId) ?? EMPTY_STAT
     for (const url of urls) {
       const current = result.get(url)
+      // 여러 광고그룹이 같은 URL 을 쓰면, 하나라도 돌고 있으면 노출 중으로 본다.
+      const running = !adgroup.userLock && adgroup.status === "ELIGIBLE"
       if (current) {
         current.salesAmt += stat.salesAmt
         current.clkCnt += stat.clkCnt
         current.adgroupNames.push(adgroup.name)
+        current.running ||= running
       } else {
         result.set(url, {
           salesAmt: stat.salesAmt,
           clkCnt: stat.clkCnt,
           adgroupNames: [adgroup.name],
+          running,
         })
       }
     }

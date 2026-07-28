@@ -84,7 +84,11 @@ const currencyCache = new Map<string, Intl.NumberFormat>()
  * "US$" 대신 "$" 로 짧게 쓰는 지표.
  * ko-KR 로케일은 USD 를 "US$" 로 표기하는데, 폭이 좁은 컬럼에서는 군더더기다.
  */
-const SHORT_CURRENCY_METRICS = new Set(["PAGE_VIEWS_RPM", "IMPRESSIONS_RPM"])
+const SHORT_CURRENCY_METRICS = new Set([
+  "ESTIMATED_EARNINGS",
+  "PAGE_VIEWS_RPM",
+  "IMPRESSIONS_RPM",
+])
 
 const shortCurrencyCache = new Map<string, Intl.NumberFormat>()
 

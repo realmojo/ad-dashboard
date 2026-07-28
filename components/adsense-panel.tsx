@@ -105,6 +105,9 @@ export async function AdSensePanel({ date }: { date?: string } = {}) {
       .then((map) => ({
         cost: Object.fromEntries([...map].map(([url, v]) => [url, v.salesAmt])),
         clicks: Object.fromEntries([...map].map(([url, v]) => [url, v.clkCnt])),
+        running: Object.fromEntries(
+          [...map].map(([url, v]) => [url, v.running])
+        ),
       }))
       .catch(() => null),
     getUsdKrwRate().catch(() => null),
@@ -215,6 +218,11 @@ export async function AdSensePanel({ date }: { date?: string } = {}) {
                     clicksByUrl={
                       report.title === "URL" && naverByUrl
                         ? naverByUrl.clicks
+                        : undefined
+                    }
+                    runningByUrl={
+                      report.title === "URL" && naverByUrl
+                        ? naverByUrl.running
                         : undefined
                     }
                     usdKrw={fx?.usdKrw}

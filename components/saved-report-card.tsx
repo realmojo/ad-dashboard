@@ -27,6 +27,8 @@ interface Props {
   costByUrl?: Record<string, number>
   /** 정규화한 URL → 네이버 광고 클릭수. PV(N)·RPM(N) 컬럼에 쓰인다. */
   clicksByUrl?: Record<string, number>
+  /** 정규화한 URL → 네이버 광고 노출 여부. URL 옆 점으로 표시된다. */
+  runningByUrl?: Record<string, boolean>
   usdKrw?: number
 }
 
@@ -41,6 +43,7 @@ export async function SavedReportCard({
   height,
   costByUrl,
   clicksByUrl,
+  runningByUrl,
   usdKrw,
 }: Props) {
   let headers: ReportHeader[] = []
@@ -110,6 +113,7 @@ export async function SavedReportCard({
       height={height}
       costByUrl={costByUrl}
       clicksByUrl={clicksByUrl}
+      runningByUrl={runningByUrl}
       usdKrw={usdKrw}
     />
   )

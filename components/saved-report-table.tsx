@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { StatusDot } from "@/components/status-text"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Table,
@@ -105,6 +106,11 @@ interface Props {
    * PV(N) 은 네이버 광고로 유입된 방문 수, RPM(N) 은 그 방문 기준 RPM 이다.
    */
   clicksByUrl?: Record<string, number>
+  /**
+   * 정규화한 URL → 네이버 광고 노출 여부.
+   * 컬럼을 늘리지 않고 URL 셀 오른쪽 끝에 점으로 표시한다.
+   */
+  runningByUrl?: Record<string, boolean>
   /** 광고비를 달러로 환산하기 위한 환율 */
   usdKrw?: number
 }
@@ -124,6 +130,7 @@ export function SavedReportTable({
   height,
   costByUrl,
   clicksByUrl,
+  runningByUrl,
   usdKrw,
 }: Props) {
   // 네이버 광고그룹에 hover 하면 같은 랜딩 URL 행을 강조한다.
@@ -174,6 +181,16 @@ export function SavedReportTable({
 
   const showCost = Boolean(costByUrl && usdKrw)
   const showNaverPv = Boolean(clicksByUrl)
+
+  /** 행에 매칭되는 네이버 광고의 노출 여부. 매칭이 없으면 null. */
+  const runningOf = (row: string[]): boolean | null => {
+    if (!runningByUrl) return null
+    for (const i of dimensionIndexes) {
+      const running = runningByUrl[normalizeUrl(row[i] ?? "")]
+      if (running !== undefined) return running
+    }
+    return null
+  }
 
   /** 행에 매칭되는 네이버 광고 클릭수(= 유입 수). */
   const naverPvOf = (row: string[]): number | null => {
@@ -348,6 +365,7 @@ export function SavedReportTable({
 
                   const rowCost = costOf(row)
                   const rowNaverPv = naverPvOf(row)
+                  const rowRunning = runningOf(row)
                   const rowRevenue =
                     earningsIndex < 0 ? 0 : Number(row[earningsIndex]) || 0
                   // 유입이 0 이면 나눌 수 없다.
@@ -391,7 +409,16 @@ export function SavedReportTable({
                               )}
                               title={isDimension(header) ? row[i] : undefined}
                             >
-                              {formatCell(header, row[i])}
+                              {isDimension(header) && rowRunning !== null ? (
+                                <span className="flex items-center justify-between gap-3">
+                                  <span>{formatCell(header, row[i])}</span>
+                                  <StatusDot
+                                    status={rowRunning ? "ELIGIBLE" : "PAUSED"}
+                                  />
+                                </span>
+                              ) : (
+                                formatCell(header, row[i])
+                              )}
                             </TableCell>
                             {showNaverPv && header.name === "PAGE_VIEWS_RPM" ? (
                               <>

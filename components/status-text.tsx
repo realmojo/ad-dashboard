@@ -17,11 +17,21 @@ const STATUS_LABEL: Record<string, string> = {
   NOT_ELIGIBLE: "노출 불가",
 }
 
+export function statusLabel(status?: string, userLock?: boolean) {
+  if (userLock) return "OFF"
+  return STATUS_LABEL[status ?? ""] ?? status ?? "-"
+}
+
+export function isRunning(status?: string, userLock?: boolean) {
+  return !userLock && (status === "ELIGIBLE" || status === "APPROVED")
+}
+
 /**
- * 상태를 한글 텍스트로 보여준다.
- * 정상은 녹색, 그 외(중지·거절 등 노출되지 않는 상태)는 빨간색.
+ * 상태를 색 점 하나로 보여준다.
+ * 정상은 녹색, 그 외(중지·거절 등 노출되지 않는 상태)는 빨강.
+ * 정확한 상태는 마우스를 올리면 나온다.
  */
-export function StatusText({
+export function StatusDot({
   status,
   userLock,
   className,
@@ -30,21 +40,22 @@ export function StatusText({
   userLock?: boolean
   className?: string
 }) {
-  const off = Boolean(userLock)
-  const label = off ? "OFF" : (STATUS_LABEL[status ?? ""] ?? status ?? "-")
-  const ok = !off && (status === "ELIGIBLE" || status === "APPROVED")
+  const ok = isRunning(status, userLock)
+  const label = statusLabel(status, userLock)
 
   return (
     <span
+      title={label}
+      aria-label={label}
+      role="img"
       className={cn(
-        "font-medium",
-        ok
-          ? "text-emerald-600 dark:text-emerald-400"
-          : "text-red-600 dark:text-red-400",
+        "inline-block size-2.5 shrink-0 rounded-full",
+        ok ? "bg-emerald-500" : "bg-red-500",
         className
       )}
-    >
-      {label}
-    </span>
+    />
   )
 }
+
+/** 이전 이름 호환 — 표시는 점으로 통일한다. */
+export const StatusText = StatusDot
