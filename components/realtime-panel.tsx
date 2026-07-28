@@ -119,11 +119,18 @@ export function RealtimePanel({ initial }: { initial: RealtimeResult | null }) {
             </p>
           ) : (
             <ul className="max-h-[28rem] space-y-2 overflow-auto">
-              {data.pages.map((page) => (
-                <li key={page.title} className="space-y-1">
+              {data.pages.map((page, i) => (
+                <li key={`${page.title}-${i}`} className="space-y-1">
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="truncate text-sm" title={page.title}>
-                      {page.title}
+                    <span
+                      className={cn(
+                        "truncate text-sm",
+                        !page.title && "text-muted-foreground italic"
+                      )}
+                      title={page.title || "페이지 제목이 수집되지 않았습니다"}
+                    >
+                      {/* GA4 가 page_title 을 못 받은 경우가 있어 빈칸으로 두지 않는다. */}
+                      {page.title || "(제목 없음)"}
                     </span>
                     <span className="shrink-0 text-sm font-medium tabular-nums">
                       {num.format(page.views)}
