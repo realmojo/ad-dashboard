@@ -147,3 +147,84 @@ export async function getPageRevenue({
 
   return { rows, totalRows: response.rowCount ?? rows.length }
 }
+
+export interface RealtimeResult {
+  /** 지난 30분 동안의 활성 사용자 */
+  activeUsers: number
+  /** 분당 활성 사용자. 29분 전 → 0분 전 순서로 30칸을 채운다. */
+  perMinute: number[]
+  /** 페이지 제목별 조회수 (많은 순) */
+  pages: Array<{ title: string; views: number }>
+}
+
+async function runRealtimeReport(
+  request: Record<string, unknown>
+): Promise<RunReportResponse> {
+  const token = await getAccessToken()
+  const property = getPropertyId()
+
+  const response = await fetch(
+    `${API_BASE}/properties/${property}:runRealtimeReport`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+      cache: "no-store",
+    }
+  )
+
+  const body = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    const detail = (body as { error?: { message?: string } } | null)?.error
+      ?.message
+    throw new Ga4Error(
+      `GA4 실시간 API 오류 (HTTP ${response.status})${detail ? ` — ${detail}` : ""}`,
+      response.status,
+      body
+    )
+  }
+
+  return body as RunReportResponse
+}
+
+/** 실시간 활성 사용자와 페이지별 조회수. */
+export async function getRealtime(pageLimit = 20): Promise<RealtimeResult> {
+  const [minutes, pages] = await Promise.all([
+    runRealtimeReport({
+      dimensions: [{ name: "minutesAgo" }],
+      metrics: [{ name: "activeUsers" }],
+      limit: 30,
+    }),
+    runRealtimeReport({
+      dimensions: [{ name: "unifiedScreenName" }],
+      metrics: [{ name: "screenPageViews" }],
+      orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
+      limit: pageLimit,
+    }),
+  ])
+
+  // minutesAgo 는 값이 있는 구간만 오므로 30칸을 0 으로 채워둔다.
+  const perMinute = new Array<number>(30).fill(0)
+  for (const row of minutes.rows ?? []) {
+    const ago = Number(row.dimensionValues[0]?.value ?? -1)
+    const users = Number(row.metricValues[0]?.value ?? 0)
+    if (ago >= 0 && ago < 30) perMinute[29 - ago] = users
+  }
+
+  return {
+    // 분 단위 합이 아니라 중복 제거된 사용자 수라서 따로 받아야 정확하다.
+    activeUsers: Number(
+      (await runRealtimeReport({ metrics: [{ name: "activeUsers" }] }))
+        .rows?.[0]?.metricValues?.[0]?.value ?? 0
+    ),
+    perMinute,
+    pages: (pages.rows ?? []).map((row) => ({
+      title: row.dimensionValues[0]?.value ?? "",
+      views: Number(row.metricValues[0]?.value ?? 0),
+    })),
+  }
+}

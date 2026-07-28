@@ -4,6 +4,7 @@ import { AdSensePanel } from "@/components/adsense-panel"
 import { DatePicker } from "@/components/date-picker"
 import { NaverAdPanel } from "@/components/naver-ad-panel"
 import { ProfitSummary } from "@/components/profit-summary"
+import { RealtimeSection } from "@/components/realtime-section"
 import { LoginScreen } from "@/components/login-screen"
 import { RefreshControl } from "@/components/refresh-control"
 import { todayInSeoul } from "@/lib/naver-ad"
@@ -66,21 +67,30 @@ export default async function Page({
         </div>
       </header>
 
-      {/* 5:5 분할. 각 패널은 독립적으로 스트리밍되어 한쪽이 느려도 다른 쪽이 먼저 표시된다. */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      {/* 2:4:4 분할. 각 패널은 독립적으로 스트리밍되어 한쪽이 느려도 다른 쪽이 먼저 표시된다. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-10">
+        <div className="min-w-0 lg:col-span-2">
+          <Suspense fallback={<PanelSkeleton title="실시간" />}>
+            <RealtimeSection />
+          </Suspense>
+        </div>
         {/* key 에 날짜를 넣어 날짜가 바뀌면 스켈레톤부터 다시 보이게 한다. */}
-        <Suspense
-          key={`naver-${date}`}
-          fallback={<PanelSkeleton title="네이버 파워링크" />}
-        >
-          <NaverAdPanel date={date} />
-        </Suspense>
-        <Suspense
-          key={`adsense-${date}`}
-          fallback={<PanelSkeleton title="애드센스 보고서" />}
-        >
-          <AdSensePanel date={date} />
-        </Suspense>
+        <div className="min-w-0 lg:col-span-4">
+          <Suspense
+            key={`naver-${date}`}
+            fallback={<PanelSkeleton title="네이버 파워링크" />}
+          >
+            <NaverAdPanel date={date} />
+          </Suspense>
+        </div>
+        <div className="min-w-0 lg:col-span-4">
+          <Suspense
+            key={`adsense-${date}`}
+            fallback={<PanelSkeleton title="애드센스 보고서" />}
+          >
+            <AdSensePanel date={date} />
+          </Suspense>
+        </div>
       </div>
     </main>
   )
