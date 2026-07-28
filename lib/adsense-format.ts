@@ -80,6 +80,27 @@ const CURRENCY_METRICS = new Set([
 const tally = new Intl.NumberFormat("ko-KR")
 const currencyCache = new Map<string, Intl.NumberFormat>()
 
+/**
+ * "US$" 대신 "$" 로 짧게 쓰는 지표.
+ * ko-KR 로케일은 USD 를 "US$" 로 표기하는데, 폭이 좁은 컬럼에서는 군더더기다.
+ */
+const SHORT_CURRENCY_METRICS = new Set(["PAGE_VIEWS_RPM", "IMPRESSIONS_RPM"])
+
+const shortCurrencyCache = new Map<string, Intl.NumberFormat>()
+
+function shortCurrencyFormatter(code: string) {
+  let formatter = shortCurrencyCache.get(code)
+  if (!formatter) {
+    // en-US 로케일은 USD 를 "$" 로 표기한다.
+    formatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: code,
+    })
+    shortCurrencyCache.set(code, formatter)
+  }
+  return formatter
+}
+
 function currencyFormatter(code: string) {
   let formatter = currencyCache.get(code)
   if (!formatter) {
@@ -228,13 +249,17 @@ export function formatCell(
   switch (header.type) {
     case "METRIC_RATIO":
       return `${(parsed * 100).toFixed(2)}%`
-    case "METRIC_CURRENCY":
+    case "METRIC_CURRENCY": {
       if (!header.currencyCode) return parsed.toString()
+      const format = SHORT_CURRENCY_METRICS.has(header.name)
+        ? shortCurrencyFormatter
+        : currencyFormatter
       try {
-        return currencyFormatter(header.currencyCode).format(parsed)
+        return format(header.currencyCode).format(parsed)
       } catch {
         return `${parsed} ${header.currencyCode}`
       }
+    }
     case "METRIC_DECIMAL":
       return parsed.toFixed(2)
     default:
