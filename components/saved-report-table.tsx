@@ -120,6 +120,38 @@ export function SavedReportTable({
   // 요청대로 기본은 제외된 상태.
   const [excluding, setExcluding] = useState(hasFilter)
 
+  /**
+   * 컬럼 표시 순서.
+   * 측정기준 → 예상 수익(+광고비·차익) → 나머지 원래 순서.
+   * 다만 클릭수는 페이지 RPM 바로 뒤로 옮긴다. 보고서 컬럼이 많아
+   * 오른쪽 끝으로 밀리면 가로 스크롤 없이는 보이지 않기 때문이다.
+   */
+  const order = useMemo(() => {
+    const dims: number[] = []
+    const earnings: number[] = []
+    const rest: number[] = []
+
+    headers.forEach((header, i) => {
+      if (isDimension(header)) dims.push(i)
+      else if (header.name === "ESTIMATED_EARNINGS") earnings.push(i)
+      else rest.push(i)
+    })
+
+    // 기준 컬럼이 없는 보고서(네이버광고 등)에서는 원래 자리를 유지한다.
+    const anchor = rest.findIndex((i) => headers[i]!.name === "PAGE_VIEWS_RPM")
+    const clicks = rest.findIndex((i) => headers[i]!.name === "CLICKS")
+    if (anchor >= 0 && clicks >= 0) {
+      const [moved] = rest.splice(clicks, 1)
+      rest.splice(
+        rest.findIndex((i) => headers[i]!.name === "PAGE_VIEWS_RPM") + 1,
+        0,
+        moved!
+      )
+    }
+
+    return [...dims, ...earnings, ...rest]
+  }, [headers])
+
   const dimensionIndexes = useMemo(
     () =>
       headers.map((h, i) => (isDimension(h) ? i : -1)).filter((i) => i >= 0),
@@ -234,28 +266,31 @@ export function SavedReportTable({
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-card">
                 <TableRow>
-                  {headers.map((header) => (
-                    <Fragment key={header.name}>
-                      <TableHead
-                        className={cn(
-                          "whitespace-nowrap",
-                          !isDimension(header) && "text-right"
-                        )}
-                      >
-                        {headerLabel(header.name)}
-                      </TableHead>
-                      {showCost && header.name === "ESTIMATED_EARNINGS" ? (
-                        <>
-                          <TableHead className="text-right whitespace-nowrap">
-                            광고비
-                          </TableHead>
-                          <TableHead className="text-right whitespace-nowrap">
-                            차익
-                          </TableHead>
-                        </>
-                      ) : null}
-                    </Fragment>
-                  ))}
+                  {order.map((i) => {
+                    const header = headers[i]!
+                    return (
+                      <Fragment key={header.name}>
+                        <TableHead
+                          className={cn(
+                            "whitespace-nowrap",
+                            !isDimension(header) && "text-right"
+                          )}
+                        >
+                          {headerLabel(header.name)}
+                        </TableHead>
+                        {showCost && header.name === "ESTIMATED_EARNINGS" ? (
+                          <>
+                            <TableHead className="text-right whitespace-nowrap">
+                              광고비
+                            </TableHead>
+                            <TableHead className="text-right whitespace-nowrap">
+                              차익
+                            </TableHead>
+                          </>
+                        ) : null}
+                      </Fragment>
+                    )
+                  })}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -284,98 +319,108 @@ export function SavedReportTable({
                           "bg-amber-100 ring-1 ring-amber-400 ring-inset dark:bg-amber-900/40 dark:ring-amber-600"
                       )}
                     >
-                      {headers.map((header, i) => (
-                        <Fragment key={header.name}>
-                          <TableCell
-                            className={cn(
-                              isDimension(header)
-                                ? // URL 은 잘리면 어느 글인지 알 수 없어 전부 보여준다.
-                                  // 넘치면 표가 가로로 스크롤된다.
-                                  "font-medium whitespace-nowrap"
-                                : "text-right whitespace-nowrap tabular-nums",
-                              header.name === "ESTIMATED_EARNINGS" &&
-                                "font-bold",
-                              // 페이지 RPM 은 구간별로 색을 입혀 한눈에 보이게 한다.
-                              header.name === "PAGE_VIEWS_RPM" &&
-                                cn("font-medium", rpmToneClass(row[i]))
-                            )}
-                            title={isDimension(header) ? row[i] : undefined}
-                          >
-                            {formatCell(header, row[i])}
-                          </TableCell>
-                          {showCost && header.name === "ESTIMATED_EARNINGS" ? (
-                            <>
-                              <TableCell className="text-right whitespace-nowrap text-muted-foreground tabular-nums">
-                                {rowCost === null
-                                  ? "-"
-                                  : usdFmt.format(rowCost / usdKrw!)}
-                              </TableCell>
-                              <TableCell
-                                className={cn(
-                                  "text-right font-medium whitespace-nowrap tabular-nums",
-                                  rowProfit &&
-                                    profitToneClass(
-                                      rowProfit.diff,
-                                      rowProfit.cost
-                                    )
-                                )}
-                              >
-                                {rowProfit ? (
-                                  <ProfitCellContent
-                                    diff={rowProfit.diff}
-                                    ratio={rowProfit.ratio}
-                                  />
-                                ) : (
-                                  "-"
-                                )}
-                              </TableCell>
-                            </>
-                          ) : null}
-                        </Fragment>
-                      ))}
+                      {order.map((i) => {
+                        const header = headers[i]!
+                        return (
+                          <Fragment key={header.name}>
+                            <TableCell
+                              className={cn(
+                                isDimension(header)
+                                  ? // URL 은 잘리면 어느 글인지 알 수 없어 전부 보여준다.
+                                    // 넘치면 표가 가로로 스크롤된다.
+                                    "font-medium whitespace-nowrap"
+                                  : "text-right whitespace-nowrap tabular-nums",
+                                header.name === "ESTIMATED_EARNINGS" &&
+                                  "font-bold",
+                                // 페이지 RPM 은 구간별로 색을 입혀 한눈에 보이게 한다.
+                                header.name === "PAGE_VIEWS_RPM" &&
+                                  cn("font-medium", rpmToneClass(row[i]))
+                              )}
+                              title={isDimension(header) ? row[i] : undefined}
+                            >
+                              {formatCell(header, row[i])}
+                            </TableCell>
+                            {showCost &&
+                            header.name === "ESTIMATED_EARNINGS" ? (
+                              <>
+                                <TableCell className="text-right whitespace-nowrap text-muted-foreground tabular-nums">
+                                  {rowCost === null
+                                    ? "-"
+                                    : usdFmt.format(rowCost / usdKrw!)}
+                                </TableCell>
+                                <TableCell
+                                  className={cn(
+                                    "text-right font-medium whitespace-nowrap tabular-nums",
+                                    rowProfit &&
+                                      profitToneClass(
+                                        rowProfit.diff,
+                                        rowProfit.cost
+                                      )
+                                  )}
+                                >
+                                  {rowProfit ? (
+                                    <ProfitCellContent
+                                      diff={rowProfit.diff}
+                                      ratio={rowProfit.ratio}
+                                    />
+                                  ) : (
+                                    "-"
+                                  )}
+                                </TableCell>
+                              </>
+                            ) : null}
+                          </Fragment>
+                        )
+                      })}
                     </TableRow>
                   )
                 })}
                 {totalCells ? (
                   <TableRow className="bg-muted/50 font-medium">
-                    {headers.map((header, i) => (
-                      <Fragment key={header.name}>
-                        <TableCell
-                          className={cn(
-                            !isDimension(header) &&
-                              "text-right whitespace-nowrap tabular-nums"
-                          )}
-                        >
-                          {isDimension(header)
-                            ? i === 0
-                              ? hiddenCount > 0
-                                ? "합계 (제외 적용)"
-                                : "합계"
-                              : ""
-                            : totalCells[i] === null
-                              ? "-"
-                              : formatCell(header, totalCells[i] ?? undefined)}
-                        </TableCell>
-                        {showCost && header.name === "ESTIMATED_EARNINGS" ? (
-                          <>
-                            <TableCell className="text-right whitespace-nowrap tabular-nums">
-                              {usdFmt.format(totalCost / usdKrw!)}
-                            </TableCell>
-                            <TableCell
-                              className={cn(
-                                "text-right font-bold whitespace-nowrap tabular-nums",
-                                profitToneClass(totalDiff, totalCostUsd)
-                              )}
-                            >
-                              <ProfitCellContent
-                                diff={totalDiff}
-                                ratio={totalRatio}
-                              />
-                            </TableCell>
-                          </>
-                        ) : null}
-                      </Fragment>
-                    ))}
+                    {order.map((i) => {
+                      const header = headers[i]!
+                      return (
+                        <Fragment key={header.name}>
+                          <TableCell
+                            className={cn(
+                              !isDimension(header) &&
+                                "text-right whitespace-nowrap tabular-nums"
+                            )}
+                          >
+                            {isDimension(header)
+                              ? i === 0
+                                ? hiddenCount > 0
+                                  ? "합계 (제외 적용)"
+                                  : "합계"
+                                : ""
+                              : totalCells[i] === null
+                                ? "-"
+                                : formatCell(
+                                    header,
+                                    totalCells[i] ?? undefined
+                                  )}
+                          </TableCell>
+                          {showCost && header.name === "ESTIMATED_EARNINGS" ? (
+                            <>
+                              <TableCell className="text-right whitespace-nowrap tabular-nums">
+                                {usdFmt.format(totalCost / usdKrw!)}
+                              </TableCell>
+                              <TableCell
+                                className={cn(
+                                  "text-right font-bold whitespace-nowrap tabular-nums",
+                                  profitToneClass(totalDiff, totalCostUsd)
+                                )}
+                              >
+                                <ProfitCellContent
+                                  diff={totalDiff}
+                                  ratio={totalRatio}
+                                />
+                              </TableCell>
+                            </>
+                          ) : null}
+                        </Fragment>
+                      )
+                    })}
                   </TableRow>
                 ) : null}
               </TableBody>
