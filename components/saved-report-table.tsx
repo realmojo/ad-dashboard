@@ -29,10 +29,17 @@ import {
 import { normalizeUrl, useHoveredUrls } from "@/lib/hovered-urls"
 import { cn } from "@/lib/utils"
 
+/** 컬럼이 많아 좁으므로 이 표에서만 라벨을 줄여 쓴다. */
+const SHORT_HEADER_LABEL: Record<string, string> = {
+  PAGE_VIEWS: "PV",
+  PAGE_VIEWS_RPM: "RPM",
+}
+
 const usdFmt = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
 })
+const num = new Intl.NumberFormat("ko-KR")
 
 /** 부호를 붙인 달러 표기. */
 function signedUsd(value: number) {
@@ -92,6 +99,12 @@ interface Props {
    * 주면 예상 수익 컬럼 오른쪽에 "광고비" 컬럼을 끼워 넣는다.
    */
   costByUrl?: Record<string, number>
+  /**
+   * 정규화한 URL → 네이버 광고 클릭수.
+   * 주면 RPM 옆에 PV(N)·RPM(N) 컬럼을 끼워 넣는다.
+   * PV(N) 은 네이버 광고로 유입된 방문 수, RPM(N) 은 그 방문 기준 RPM 이다.
+   */
+  clicksByUrl?: Record<string, number>
   /** 광고비를 달러로 환산하기 위한 환율 */
   usdKrw?: number
 }
@@ -110,6 +123,7 @@ export function SavedReportTable({
   excludeDomains = [],
   height,
   costByUrl,
+  clicksByUrl,
   usdKrw,
 }: Props) {
   // 네이버 광고그룹에 hover 하면 같은 랜딩 URL 행을 강조한다.
@@ -159,6 +173,17 @@ export function SavedReportTable({
   )
 
   const showCost = Boolean(costByUrl && usdKrw)
+  const showNaverPv = Boolean(clicksByUrl)
+
+  /** 행에 매칭되는 네이버 광고 클릭수(= 유입 수). */
+  const naverPvOf = (row: string[]): number | null => {
+    if (!clicksByUrl) return null
+    for (const i of dimensionIndexes) {
+      const clicks = clicksByUrl[normalizeUrl(row[i] ?? "")]
+      if (clicks !== undefined) return clicks
+    }
+    return null
+  }
 
   /** 행의 측정기준 값 중 광고비가 매칭되는 첫 URL 의 비용(원). */
   const costOf = (row: string[]): number | null => {
@@ -194,6 +219,9 @@ export function SavedReportTable({
           (sum, row) => sum + (Number(row[earningsIndex]) || 0),
           0
         )
+  const totalNaverPv = showNaverPv
+    ? filtered.reduce((sum, row) => sum + (naverPvOf(row) ?? 0), 0)
+    : 0
   const totalCostUsd = usdKrw ? totalCost / usdKrw : 0
   const totalDiff = totalRevenue - totalCostUsd
   const totalRatio = profitRatio(totalDiff, totalCostUsd)
@@ -276,8 +304,25 @@ export function SavedReportTable({
                             !isDimension(header) && "text-right"
                           )}
                         >
-                          {headerLabel(header.name)}
+                          {SHORT_HEADER_LABEL[header.name] ??
+                            headerLabel(header.name)}
                         </TableHead>
+                        {showNaverPv && header.name === "PAGE_VIEWS_RPM" ? (
+                          <>
+                            <TableHead
+                              className="text-right whitespace-nowrap"
+                              title="네이버 광고 클릭수 (광고로 유입된 방문 수)"
+                            >
+                              PV(N)
+                            </TableHead>
+                            <TableHead
+                              className="text-right whitespace-nowrap"
+                              title="네이버 광고 유입 기준 RPM = 예상 수익 ÷ PV(N) × 1000"
+                            >
+                              RPM(N)
+                            </TableHead>
+                          </>
+                        ) : null}
                         {showCost && header.name === "ESTIMATED_EARNINGS" ? (
                           <>
                             <TableHead className="text-right whitespace-nowrap">
@@ -302,6 +347,14 @@ export function SavedReportTable({
                     )
 
                   const rowCost = costOf(row)
+                  const rowNaverPv = naverPvOf(row)
+                  const rowRevenue =
+                    earningsIndex < 0 ? 0 : Number(row[earningsIndex]) || 0
+                  // 유입이 0 이면 나눌 수 없다.
+                  const rowNaverRpm =
+                    rowNaverPv && rowNaverPv > 0
+                      ? (rowRevenue / rowNaverPv) * 1000
+                      : null
                   const rowProfit =
                     rowCost === null || !usdKrw || earningsIndex < 0
                       ? null
@@ -340,6 +393,29 @@ export function SavedReportTable({
                             >
                               {formatCell(header, row[i])}
                             </TableCell>
+                            {showNaverPv && header.name === "PAGE_VIEWS_RPM" ? (
+                              <>
+                                <TableCell className="text-right whitespace-nowrap tabular-nums">
+                                  {rowNaverPv === null
+                                    ? "-"
+                                    : num.format(rowNaverPv)}
+                                </TableCell>
+                                <TableCell
+                                  className={cn(
+                                    "text-right font-medium whitespace-nowrap tabular-nums",
+                                    rpmToneClass(
+                                      rowNaverRpm === null
+                                        ? undefined
+                                        : String(rowNaverRpm)
+                                    )
+                                  )}
+                                >
+                                  {rowNaverRpm === null
+                                    ? "-"
+                                    : usdFmt.format(rowNaverRpm)}
+                                </TableCell>
+                              </>
+                            ) : null}
                             {showCost &&
                             header.name === "ESTIMATED_EARNINGS" ? (
                               <>
@@ -400,6 +476,20 @@ export function SavedReportTable({
                                     totalCells[i] ?? undefined
                                   )}
                           </TableCell>
+                          {showNaverPv && header.name === "PAGE_VIEWS_RPM" ? (
+                            <>
+                              <TableCell className="text-right whitespace-nowrap tabular-nums">
+                                {num.format(totalNaverPv)}
+                              </TableCell>
+                              <TableCell className="text-right font-bold whitespace-nowrap tabular-nums">
+                                {totalNaverPv > 0
+                                  ? usdFmt.format(
+                                      (totalRevenue / totalNaverPv) * 1000
+                                    )
+                                  : "-"}
+                              </TableCell>
+                            </>
+                          ) : null}
                           {showCost && header.name === "ESTIMATED_EARNINGS" ? (
                             <>
                               <TableCell className="text-right whitespace-nowrap tabular-nums">

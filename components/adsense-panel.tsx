@@ -100,11 +100,12 @@ export async function AdSensePanel({ date }: { date?: string } = {}) {
 
   // URL 보고서에 네이버 광고비를 나란히 보여주기 위한 매핑.
   // 실패해도 보고서 자체는 떠야 하므로 조용히 비워둔다.
-  const [costByUrl, fx] = await Promise.all([
+  const [naverByUrl, fx] = await Promise.all([
     getUrlCostMap(date)
-      .then((map) =>
-        Object.fromEntries([...map].map(([url, v]) => [url, v.salesAmt]))
-      )
+      .then((map) => ({
+        cost: Object.fromEntries([...map].map(([url, v]) => [url, v.salesAmt])),
+        clicks: Object.fromEntries([...map].map(([url, v]) => [url, v.clkCnt])),
+      }))
       .catch(() => null),
     getUsdKrwRate().catch(() => null),
   ])
@@ -207,8 +208,13 @@ export async function AdSensePanel({ date }: { date?: string } = {}) {
                       report.title === "URL" ? PANEL_CARD_HEIGHT : undefined
                     }
                     costByUrl={
-                      report.title === "URL" && costByUrl
-                        ? costByUrl
+                      report.title === "URL" && naverByUrl
+                        ? naverByUrl.cost
+                        : undefined
+                    }
+                    clicksByUrl={
+                      report.title === "URL" && naverByUrl
+                        ? naverByUrl.clicks
                         : undefined
                     }
                     usdKrw={fx?.usdKrw}

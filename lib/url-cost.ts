@@ -51,6 +51,8 @@ async function getAdGroupUrls(): Promise<Map<string, string[]>> {
 export interface UrlCost {
   /** 광고비(원, VAT 제외) */
   salesAmt: number
+  /** 네이버 광고 클릭수 = 이 URL 로 유입된 방문 수 */
+  clkCnt: number
   /** 이 URL 로 연결되는 광고그룹 이름들 */
   adgroupNames: string[]
 }
@@ -89,10 +91,12 @@ export async function getUrlCostMap(
       const current = result.get(url)
       if (current) {
         current.salesAmt += stat.salesAmt
+        current.clkCnt += stat.clkCnt
         current.adgroupNames.push(adgroup.name)
       } else {
         result.set(url, {
           salesAmt: stat.salesAmt,
+          clkCnt: stat.clkCnt,
           adgroupNames: [adgroup.name],
         })
       }
