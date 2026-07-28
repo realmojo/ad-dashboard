@@ -30,6 +30,39 @@ export const DIMENSION_LABEL: Record<string, string> = {
   DATE: "날짜",
 }
 
+/**
+ * 측정기준 "값" 의 한글 표기.
+ * 컬럼별로 코드 체계가 달라 측정기준 이름으로 한 번 나눈다.
+ * 목록에 없는 코드는 원문을 그대로 보여준다(새 유형이 생겨도 깨지지 않게).
+ */
+const DIMENSION_VALUE_LABEL: Record<string, Record<string, string>> = {
+  REQUESTED_AD_TYPE_CODE: {
+    ANCHOR: "앵커",
+    IMAGE: "이미지",
+    INTERSTITIAL: "전면",
+    MULTIPLEX: "멀티플렉스",
+    ON_PAGE: "페이지 내",
+    TEXT: "텍스트",
+    TEXT_IMAGE: "텍스트·이미지",
+    VIGNETTE: "비네트",
+    HTML: "HTML",
+  },
+  AD_PLACEMENT_CODE: {
+    AUTO_ADS: "자동",
+    MANUAL: "수동",
+    OFFERWALL: "오퍼월",
+  },
+  PLATFORM_TYPE_CODE: {
+    DESKTOP: "데스크톱",
+    HIGH_END_MOBILE: "모바일",
+    TABLET: "태블릿",
+  },
+}
+
+export function dimensionValueLabel(name: string, value: string): string {
+  return DIMENSION_VALUE_LABEL[name]?.[value] ?? value
+}
+
 export function headerLabel(name: string): string {
   return DIMENSION_LABEL[name] ?? METRIC_LABEL[name] ?? name
 }
@@ -184,7 +217,10 @@ export function formatCell(
 ): string {
   if (value === undefined || value === "") return "-"
 
-  if (isDimension(header)) return cleanDimension(header.name, value) || "-"
+  if (isDimension(header)) {
+    const cleaned = cleanDimension(header.name, value)
+    return cleaned ? dimensionValueLabel(header.name, cleaned) : "-"
+  }
 
   const parsed = Number(value)
   if (Number.isNaN(parsed)) return value
