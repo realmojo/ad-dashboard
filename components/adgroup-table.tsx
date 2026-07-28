@@ -41,7 +41,14 @@ const usd = new Intl.NumberFormat("en-US", {
 const pct = (n: number) => `${n.toFixed(2)}%`
 
 type SortKey =
-  "name" | "bidAmt" | "impCnt" | "clkCnt" | "ctr" | "cpc" | "salesAmt"
+  | "name"
+  | "bidAmt"
+  | "dailyBudget"
+  | "impCnt"
+  | "clkCnt"
+  | "ctr"
+  | "cpc"
+  | "salesAmt"
 
 type Direction = "asc" | "desc"
 
@@ -54,6 +61,7 @@ interface Column {
 const COLUMNS: Column[] = [
   { key: "name", label: "광고그룹", numeric: false },
   { key: "bidAmt", label: "기본입찰가", numeric: true },
+  { key: "dailyBudget", label: "하루예산", numeric: true },
   { key: "impCnt", label: "노출수", numeric: true },
   { key: "clkCnt", label: "클릭수", numeric: true },
   { key: "ctr", label: "클릭률", numeric: true },
@@ -70,6 +78,9 @@ function valueOf(group: PowerLinkAdGroup, key: SortKey): string | number {
       return group.name
     case "bidAmt":
       return group.bidAmt
+    case "dailyBudget":
+      // 제한없음은 사실상 가장 큰 예산이므로 정렬에서 맨 위로 간다.
+      return group.useDailyBudget ? group.dailyBudget : Number.MAX_SAFE_INTEGER
     default:
       return group.stat[key]
   }
@@ -266,6 +277,13 @@ export function AdGroupTable({
               <TableCell className="font-medium">{adgroup.name}</TableCell>
               <TableCell className="text-right tabular-nums">
                 {won.format(adgroup.bidAmt)}원
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {adgroup.useDailyBudget ? (
+                  `${won.format(adgroup.dailyBudget)}원`
+                ) : (
+                  <span className="text-muted-foreground">제한없음</span>
+                )}
               </TableCell>
               <TableCell className="text-right tabular-nums">
                 {won.format(adgroup.stat.impCnt)}
