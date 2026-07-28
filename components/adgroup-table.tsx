@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react"
 
-import { StatusText } from "@/components/status-text"
+import { StatusDot } from "@/components/status-text"
 import {
   Table,
   TableBody,
@@ -252,7 +252,6 @@ export function AdGroupTable({
                 </TableHead>
               )
             })}
-            <TableHead>상태</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -274,7 +273,16 @@ export function AdGroupTable({
                 adgroup.nccAdgroupId === selectedId && "bg-muted"
               )}
             >
-              <TableCell className="font-medium">{adgroup.name}</TableCell>
+              <TableCell className="font-medium">
+                {/* URL 표와 같은 방식 — 컬럼을 늘리지 않고 이름 오른쪽에 상태를 붙인다. */}
+                <span className="flex items-center justify-between gap-3">
+                  <span>{adgroup.name}</span>
+                  <StatusDot
+                    status={adgroup.status}
+                    userLock={adgroup.userLock}
+                  />
+                </span>
+              </TableCell>
               <TableCell className="text-right tabular-nums">
                 {won.format(adgroup.bidAmt)}원
               </TableCell>
@@ -309,12 +317,6 @@ export function AdGroupTable({
                     ({usd.format(adgroup.stat.salesAmt / usdKrw)})
                   </span>
                 ) : null}
-              </TableCell>
-              <TableCell>
-                <StatusText
-                  status={adgroup.status}
-                  userLock={adgroup.userLock}
-                />
               </TableCell>
             </TableRow>
           ))}
