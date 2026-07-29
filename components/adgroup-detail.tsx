@@ -3,7 +3,11 @@
 import { useEffect, useState } from "react"
 
 import { CopyButton } from "@/components/copy-button"
-import { StatusText } from "@/components/status-text"
+import {
+  KEYWORD_STATE_CLASS,
+  StatusDot,
+  keywordState,
+} from "@/components/status-text"
 import {
   Table,
   TableBody,
@@ -19,6 +23,7 @@ import {
   loadDetail,
 } from "@/lib/adgroup-detail-store"
 import type { AdGroupDetailResult } from "@/lib/naver-ad"
+import { cn } from "@/lib/utils"
 
 const won = new Intl.NumberFormat("ko-KR")
 const pct = (n: number) => `${n.toFixed(2)}%`
@@ -118,7 +123,7 @@ export function AdGroupDetail({
                         <span className="font-medium">
                           {content.headline ?? "(제목 없음)"}
                         </span>
-                        <StatusText
+                        <StatusDot
                           status={ad.inspectStatus ?? ad.status}
                           userLock={ad.userLock}
                         />
@@ -175,13 +180,13 @@ export function AdGroupDetail({
                       <TableHead>키워드</TableHead>
                       <TableHead className="text-right">노출수</TableHead>
                       <TableHead className="text-right">클릭수</TableHead>
+                      <TableHead className="whitespace-nowrap">상태</TableHead>
                       <TableHead className="text-right">클릭률</TableHead>
                       <TableHead className="text-right">CPC</TableHead>
                       <TableHead className="text-right">비용</TableHead>
                       <TableHead className="text-right">평균순위</TableHead>
                       <TableHead className="text-right">입찰가</TableHead>
                       <TableHead className="text-right">품질지수</TableHead>
-                      <TableHead>상태</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -195,6 +200,14 @@ export function AdGroupDetail({
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
                           {won.format(keyword.stat.clkCnt)}
+                        </TableCell>
+                        <TableCell
+                          className={cn(
+                            "font-medium whitespace-nowrap",
+                            KEYWORD_STATE_CLASS[keywordState(keyword).tone]
+                          )}
+                        >
+                          {keywordState(keyword).label}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
                           {pct(keyword.stat.ctr)}
@@ -218,12 +231,6 @@ export function AdGroupDetail({
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
                           {keyword.nccQi?.qiGrade ?? "-"}
-                        </TableCell>
-                        <TableCell>
-                          <StatusText
-                            status={keyword.status}
-                            userLock={keyword.userLock}
-                          />
                         </TableCell>
                       </TableRow>
                     ))}

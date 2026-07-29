@@ -60,3 +60,50 @@ export function StatusDot({
 
 /** 이전 이름 호환 — 표시는 점으로 통일한다. */
 export const StatusText = StatusDot
+
+/**
+ * 키워드의 노출 상태를 한 마디로 정리한다.
+ *
+ * 계정에서 실제로 나오는 조합(검수상태 / 상태 / 사유):
+ *   APPROVED    / ELIGIBLE / ELIGIBLE               → 노출중
+ *   PENDING     / PAUSED   / KEYWORD_DISAPPROVED    → 검토 대기
+ *   UNDER_REVIEW/ PAUSED   / KEYWORD_UNDER_REVIEW   → 검토중
+ *   APPROVED    / PAUSED   / KEYWORD_PAUSED (lock)  → 중지
+ */
+export function keywordState(keyword: {
+  status?: string
+  statusReason?: string
+  inspectStatus?: string
+  userLock?: boolean
+}): { label: string; tone: "ok" | "review" | "off" } {
+  if (keyword.userLock) return { label: "중지", tone: "off" }
+
+  switch (keyword.inspectStatus) {
+    case "UNDER_REVIEW":
+      return { label: "검토중", tone: "review" }
+    case "PENDING":
+      return { label: "검토 대기", tone: "review" }
+    case "REJECTED":
+      return { label: "검수 거절", tone: "off" }
+    default:
+      break
+  }
+
+  if (keyword.status === "ELIGIBLE") return { label: "노출중", tone: "ok" }
+
+  switch (keyword.statusReason) {
+    case "KEYWORD_PAUSED":
+      return { label: "중지", tone: "off" }
+    case "KEYWORD_DISAPPROVED":
+      return { label: "검수 미승인", tone: "off" }
+    default:
+      // 모르는 사유는 원문을 그대로 보여 준다.
+      return { label: keyword.statusReason ?? "노출 불가", tone: "off" }
+  }
+}
+
+export const KEYWORD_STATE_CLASS: Record<"ok" | "review" | "off", string> = {
+  ok: "text-emerald-600 dark:text-emerald-400",
+  review: "text-amber-600 dark:text-amber-500",
+  off: "text-red-600 dark:text-red-400",
+}
