@@ -127,10 +127,26 @@ export function AdGroupDetail({
                           status={ad.inspectStatus ?? ad.status}
                           userLock={ad.userLock}
                         />
+                        {content.headline ? (
+                          <CopyButton
+                            text={content.headline}
+                            label=""
+                            title="제목 복사"
+                          />
+                        ) : null}
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {content.description ?? "(설명 없음)"}
-                      </p>
+                      <div className="flex items-start gap-2">
+                        <p className="text-sm text-muted-foreground">
+                          {content.description ?? "(설명 없음)"}
+                        </p>
+                        {content.description ? (
+                          <CopyButton
+                            text={content.description}
+                            label=""
+                            title="설명 복사"
+                          />
+                        ) : null}
+                      </div>
                       <p className="text-xs text-muted-foreground tabular-nums">
                         노출 {won.format(ad.stat.impCnt)} · 클릭{" "}
                         {won.format(ad.stat.clkCnt)} · 클릭률 {pct(ad.stat.ctr)}{" "}
@@ -138,14 +154,17 @@ export function AdGroupDetail({
                         {won.format(ad.stat.salesAmt)}원
                       </p>
                       {url ? (
-                        <a
-                          href={url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs break-all text-blue-600 underline underline-offset-2 dark:text-blue-400"
-                        >
-                          {url}
-                        </a>
+                        <div className="flex items-start gap-2">
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs break-all text-blue-600 underline underline-offset-2 dark:text-blue-400"
+                          >
+                            {url}
+                          </a>
+                          <CopyButton text={url} label="" title="URL 복사" />
+                        </div>
                       ) : null}
                     </li>
                   )

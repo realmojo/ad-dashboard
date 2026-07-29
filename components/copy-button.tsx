@@ -39,6 +39,7 @@ async function copyText(text: string): Promise<boolean> {
 
 export function CopyButton({
   text,
+  /** 빈 문자열이면 아이콘만 보여준다. 좁은 자리에 붙일 때 쓴다. */
   label = "복사",
   copiedLabel = "복사됨",
   title,
@@ -70,8 +71,10 @@ export function CopyButton({
       onClick={() => {
         copyText(text).then((ok) => (ok ? setCopied(true) : setFailed(true)))
       }}
+      aria-label={title ?? label ?? "복사"}
       className={cn(
-        "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs transition-colors hover:bg-muted",
+        "inline-flex shrink-0 items-center gap-1 rounded-md border text-xs transition-colors hover:bg-muted",
+        label ? "px-2 py-0.5" : "p-1",
         copied && "border-emerald-500 text-emerald-600 dark:text-emerald-400",
         failed && "border-red-500 text-red-600 dark:text-red-400",
         className
@@ -82,7 +85,7 @@ export function CopyButton({
       ) : (
         <Copy className="size-3" aria-hidden />
       )}
-      {failed ? "복사 실패" : copied ? copiedLabel : label}
+      {label ? (failed ? "복사 실패" : copied ? copiedLabel : label) : null}
     </button>
   )
 }
