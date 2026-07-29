@@ -25,9 +25,11 @@ export function hasCachedDetail(key: string) {
 /** 이미 받아둔 게 있으면 그대로, 없으면 한 번만 요청한다. */
 export function loadDetail(
   nccAdgroupId: string,
-  date?: string
+  date?: string,
+  platform: "naver" | "kakao" = "naver",
+  campaignId?: string
 ): Promise<AdGroupDetailResult> {
-  const key = detailCacheKey(nccAdgroupId, date)
+  const key = `${platform}:${detailCacheKey(nccAdgroupId, date)}`
 
   const cached = cache.get(key)
   if (cached) return Promise.resolve(cached)
@@ -35,9 +37,14 @@ export function loadDetail(
   const pending = inflight.get(key)
   if (pending) return pending
 
-  const query = date ? `?since=${date}` : ""
+  // 카카오는 성과 파라미터가 없고 키워드만 돌려준다.
+  // 카카오 키워드 성과는 campaignId 가 있어야 조회된다.
+  const params = new URLSearchParams()
+  if (date) params.set("since", date)
+  if (platform === "kakao" && campaignId) params.set("campaignId", campaignId)
+  const query = params.toString() ? `?${params}` : ""
   const promise = fetch(
-    `/api/naver-ad/adgroups/${encodeURIComponent(nccAdgroupId)}${query}`
+    `/api/${platform}-ad/adgroups/${encodeURIComponent(nccAdgroupId)}${query}`
   )
     .then(async (res) => {
       const body = await res.json()

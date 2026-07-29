@@ -21,6 +21,9 @@ import {
 import { cn } from "@/lib/utils"
 import type { PowerLinkAdGroup } from "@/lib/naver-ad"
 
+/** 네이버·카카오 광고그룹을 같은 표로 그리기 위한 최소 공통 형태. */
+export type TableAdGroup = Omit<PowerLinkAdGroup, "ads" | "keywords">
+
 const won = new Intl.NumberFormat("ko-KR")
 
 /** CPC 기준선(원). 넘으면 빨강, 이하면 녹색. */
@@ -72,7 +75,7 @@ const COLUMNS: Column[] = [
 /** 1차 정렬 값이 같을 때 가르는 기준. 항상 내림차순으로 적용한다. */
 const TIE_BREAK_KEY = "impCnt" as const
 
-function valueOf(group: PowerLinkAdGroup, key: SortKey): string | number {
+function valueOf(group: TableAdGroup, key: SortKey): string | number {
   switch (key) {
     case "name":
       return group.name
@@ -96,7 +99,7 @@ export function AdGroupTable({
   selectedId,
   onSelect,
 }: {
-  adgroups: PowerLinkAdGroup[]
+  adgroups: TableAdGroup[]
   defaultSortKey?: SortKey
   /** 상세(키워드·소재) 성과를 조회할 날짜 "YYYY-MM-DD" */
   date?: string

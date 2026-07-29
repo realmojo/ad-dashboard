@@ -1,5 +1,3 @@
-import Link from "next/link"
-
 import { AdGroupSection } from "@/components/adgroup-section"
 import { StatTile } from "@/components/stat-tile"
 import { StatusText } from "@/components/status-text"
@@ -10,11 +8,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { formatFxTime, getUsdKrwRate, krwToUsd } from "@/lib/fx"
+import { formatFxTime, krwToUsd, type FxRate } from "@/lib/fx"
 import { PANEL_CARD_HEIGHT } from "@/lib/layout"
+import { getNaverReport } from "@/lib/ad-report-cache"
 import {
   NaverAdError,
-  getPowerLinkCampaigns,
   todayInSeoul,
   type PowerLinkCampaign,
 } from "@/lib/naver-ad"
@@ -22,20 +20,22 @@ import { cn } from "@/lib/utils"
 
 const won = new Intl.NumberFormat("ko-KR")
 
-export async function NaverAdPanel({ date }: { date?: string } = {}) {
+export async function NaverAdBody({
+  date,
+  fx,
+}: {
+  date?: string
+  fx: FxRate | null
+}) {
   let campaigns: PowerLinkCampaign[] = []
   let statBaseTime: string | null = null
   let statLagMinutes: number | null = null
   let errorMessage: string | null = null
 
   const selectedDate = date ?? todayInSeoul()
-  const fx = await getUsdKrwRate()
 
   try {
-    const report = await getPowerLinkCampaigns({
-      includeAds: false,
-      since: date,
-    })
+    const report = await getNaverReport(selectedDate)
     campaigns = report.campaigns
     statBaseTime = report.statBaseTime
     statLagMinutes = report.statLagMinutes
@@ -59,28 +59,7 @@ export async function NaverAdPanel({ date }: { date?: string } = {}) {
   const adgroups = campaigns.flatMap((c) => c.adgroups)
 
   return (
-    <section className="min-w-0 space-y-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <div className="flex flex-wrap items-baseline gap-2">
-          <h2 className="text-lg font-semibold tracking-tight">
-            네이버 파워링크
-          </h2>
-          {!errorMessage && statBaseTime ? (
-            <span className="text-xs text-amber-600 dark:text-amber-500">
-              집계 기준 {statBaseTime}
-              {statLagMinutes !== null ? ` · 약 ${statLagMinutes}분 전` : ""} —
-              이후 발생분은 아직 반영되지 않습니다.
-            </span>
-          ) : null}
-        </div>
-        <Link
-          href="/powerlink"
-          className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
-        >
-          자세히 보기
-        </Link>
-      </div>
-
+    <div className="space-y-4">
       {errorMessage ? (
         <Card>
           <CardHeader>
@@ -93,6 +72,13 @@ export async function NaverAdPanel({ date }: { date?: string } = {}) {
         </Card>
       ) : (
         <>
+          {statBaseTime ? (
+            <p className="text-xs text-amber-600 dark:text-amber-500">
+              집계 기준 {statBaseTime}
+              {statLagMinutes !== null ? ` · 약 ${statLagMinutes}분 전` : ""} —
+              이후 발생분은 아직 반영되지 않습니다.
+            </p>
+          ) : null}
           <p className="text-xs text-muted-foreground">
             {selectedDate}
             {selectedDate === todayInSeoul() ? " (오늘)" : ""} · 캠페인{" "}
@@ -120,7 +106,7 @@ export async function NaverAdPanel({ date }: { date?: string } = {}) {
               contentClassName="min-h-0 flex-1 overflow-auto"
               stickyHeader
               date={selectedDate}
-              usdKrw={fx.usdKrw}
+              usdKrw={fx?.usdKrw}
               header={
                 <>
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -138,19 +124,17 @@ export async function NaverAdPanel({ date }: { date?: string } = {}) {
                         총 비용
                       </span>
                       <span className="text-lg font-bold tabular-nums">
-                        {krwToUsd(campaign.stat.salesAmt, fx.usdKrw)}
+                        {fx ? krwToUsd(campaign.stat.salesAmt, fx.usdKrw) : "-"}
                       </span>
                     </div>
                   </div>
                   <CardDescription>
                     노출 {won.format(campaign.stat.impCnt)} · 클릭{" "}
                     {won.format(campaign.stat.clkCnt)} · 비용{" "}
-                    {won.format(campaign.stat.salesAmt)}원 (1 USD ={" "}
-                    {won.format(Math.round(fx.usdKrw))}원 · {fx.sourceLabel}
-                    {formatFxTime(fx.updatedAt)
-                      ? ` ${formatFxTime(fx.updatedAt)} 기준`
+                    {won.format(campaign.stat.salesAmt)}원
+                    {fx
+                      ? ` (1 USD = ${won.format(Math.round(fx.usdKrw))}원 · ${fx.sourceLabel}${formatFxTime(fx.updatedAt) ? ` ${formatFxTime(fx.updatedAt)} 기준` : ""})`
                       : ""}
-                    )
                   </CardDescription>
                 </>
               }
@@ -158,6 +142,6 @@ export async function NaverAdPanel({ date }: { date?: string } = {}) {
           ))}
         </>
       )}
-    </section>
+    </div>
   )
 }

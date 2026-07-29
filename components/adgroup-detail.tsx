@@ -34,10 +34,16 @@ export function AdGroupDetail({
   nccAdgroupId,
   name,
   date,
+  platform = "naver",
+  campaignId,
   onClose,
 }: {
   nccAdgroupId: string
   name: string
+  /** 어느 매체의 상세 API 를 부를지 */
+  platform?: "naver" | "kakao"
+  /** 카카오 키워드 성과 조회에 필요 */
+  campaignId?: string
   /** 성과 조회 날짜 "YYYY-MM-DD". 날짜가 바뀌면 다시 조회한다. */
   date?: string
   onClose?: () => void
@@ -57,7 +63,7 @@ export function AdGroupDetail({
 
     let cancelled = false
 
-    loadDetail(nccAdgroupId, date)
+    loadDetail(nccAdgroupId, date, platform, campaignId)
       .then((body) => {
         if (!cancelled) setLoaded((prev) => ({ ...prev, [cacheKey]: body }))
       })
@@ -69,7 +75,7 @@ export function AdGroupDetail({
     return () => {
       cancelled = true
     }
-  }, [nccAdgroupId, cacheKey, date])
+  }, [nccAdgroupId, cacheKey, date, platform, campaignId])
 
   // 표에 보이는 순서 그대로 복사되도록 한 번만 정렬해 재사용한다.
   const sortedKeywords = detail

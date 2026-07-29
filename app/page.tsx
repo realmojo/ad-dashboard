@@ -2,7 +2,7 @@ import { Suspense } from "react"
 
 import { AdSensePanel } from "@/components/adsense-panel"
 import { DatePicker } from "@/components/date-picker"
-import { NaverAdPanel } from "@/components/naver-ad-panel"
+import { SearchAdSection } from "@/components/search-ad-section"
 import { ProfitSummary } from "@/components/profit-summary"
 import { RealtimeSection } from "@/components/realtime-section"
 import { LoginScreen } from "@/components/login-screen"
@@ -77,10 +77,10 @@ export default async function Page({
         {/* key 에 날짜를 넣어 날짜가 바뀌면 스켈레톤부터 다시 보이게 한다. */}
         <div className="min-w-0 lg:col-span-4">
           <Suspense
-            key={`naver-${date}`}
-            fallback={<PanelSkeleton title="네이버 파워링크" />}
+            key={`search-ad-${date}`}
+            fallback={<PanelSkeleton title="검색광고" />}
           >
-            <NaverAdPanel date={date} />
+            <SearchAdSection date={date} />
           </Suspense>
         </div>
         <div className="min-w-0 lg:col-span-4">

@@ -5,11 +5,11 @@ import { useState, type ReactNode } from "react"
 import { AdGroupDetail } from "@/components/adgroup-detail"
 import { AdGroupTable } from "@/components/adgroup-table"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import type { PowerLinkAdGroup } from "@/lib/naver-ad"
+import type { TableAdGroup } from "@/components/adgroup-table"
 import { cn } from "@/lib/utils"
 
 interface Props {
-  adgroups: PowerLinkAdGroup[]
+  adgroups: TableAdGroup[]
   /** 카드 헤더에 넣을 캠페인 정보 (서버에서 그려 넘긴다) */
   header?: ReactNode
   cardClassName?: string
@@ -18,6 +18,8 @@ interface Props {
   stickyHeader?: boolean
   date?: string
   usdKrw?: number
+  /** 상세(키워드) 조회 시 어느 매체의 API 를 부를지 */
+  platform?: "naver" | "kakao"
 }
 
 /**
@@ -33,6 +35,7 @@ export function AdGroupSection({
   stickyHeader,
   date,
   usdKrw,
+  platform = "naver",
 }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const selected =
@@ -73,6 +76,8 @@ export function AdGroupSection({
           nccAdgroupId={selected.nccAdgroupId}
           name={selected.name}
           date={date}
+          platform={platform}
+          campaignId={selected.nccCampaignId}
           onClose={() => setSelectedId(null)}
         />
       ) : null}
