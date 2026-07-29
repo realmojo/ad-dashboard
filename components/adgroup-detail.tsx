@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 
+import { CopyButton } from "@/components/copy-button"
 import { StatusText } from "@/components/status-text"
 import {
   Table,
@@ -64,6 +65,11 @@ export function AdGroupDetail({
       cancelled = true
     }
   }, [nccAdgroupId, cacheKey, date])
+
+  // 표에 보이는 순서 그대로 복사되도록 한 번만 정렬해 재사용한다.
+  const sortedKeywords = detail
+    ? [...detail.keywords].sort((a, b) => b.stat.salesAmt - a.stat.salesAmt)
+    : []
 
   return (
     <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
@@ -144,9 +150,19 @@ export function AdGroupDetail({
           </section>
 
           <section className="space-y-2">
-            <h4 className="text-xs font-semibold tracking-wide uppercase">
-              키워드 {detail.keywords.length}개
-            </h4>
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 className="text-xs font-semibold tracking-wide uppercase">
+                키워드 {detail.keywords.length}개
+              </h4>
+              {sortedKeywords.length > 0 ? (
+                <CopyButton
+                  text={sortedKeywords.map((k) => k.keyword).join("\n")}
+                  label="키워드 복사"
+                  copiedLabel={`${sortedKeywords.length}개 복사됨`}
+                  title="표에 보이는 순서대로 한 줄에 하나씩 복사합니다"
+                />
+              ) : null}
+            </div>
             {detail.keywords.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 등록된 키워드가 없습니다.
@@ -169,52 +185,48 @@ export function AdGroupDetail({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {[...detail.keywords]
-                      .sort((a, b) => b.stat.salesAmt - a.stat.salesAmt)
-                      .map((keyword) => (
-                        <TableRow key={keyword.nccKeywordId}>
-                          <TableCell className="font-medium">
-                            {keyword.keyword}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {won.format(keyword.stat.impCnt)}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {won.format(keyword.stat.clkCnt)}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {pct(keyword.stat.ctr)}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {won.format(keyword.stat.cpc)}원
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {won.format(keyword.stat.salesAmt)}원
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {keyword.stat.avgRnk > 0
-                              ? keyword.stat.avgRnk
-                              : "-"}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {won.format(keyword.bidAmt)}원
-                            {keyword.useGroupBidAmt ? (
-                              <span className="ml-1 text-xs text-muted-foreground">
-                                (그룹)
-                              </span>
-                            ) : null}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {keyword.nccQi?.qiGrade ?? "-"}
-                          </TableCell>
-                          <TableCell>
-                            <StatusText
-                              status={keyword.status}
-                              userLock={keyword.userLock}
-                            />
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                    {sortedKeywords.map((keyword) => (
+                      <TableRow key={keyword.nccKeywordId}>
+                        <TableCell className="font-medium">
+                          {keyword.keyword}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {won.format(keyword.stat.impCnt)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {won.format(keyword.stat.clkCnt)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {pct(keyword.stat.ctr)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {won.format(keyword.stat.cpc)}원
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {won.format(keyword.stat.salesAmt)}원
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {keyword.stat.avgRnk > 0 ? keyword.stat.avgRnk : "-"}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {won.format(keyword.bidAmt)}원
+                          {keyword.useGroupBidAmt ? (
+                            <span className="ml-1 text-xs text-muted-foreground">
+                              (그룹)
+                            </span>
+                          ) : null}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {keyword.nccQi?.qiGrade ?? "-"}
+                        </TableCell>
+                        <TableCell>
+                          <StatusText
+                            status={keyword.status}
+                            userLock={keyword.userLock}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </div>
