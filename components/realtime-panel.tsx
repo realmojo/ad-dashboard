@@ -21,6 +21,17 @@ export function RealtimePanel({ initial }: { initial: RealtimeResult | null }) {
   const [data, setData] = useState<RealtimeResult | null>(initial)
   const [error, setError] = useState<string | null>(null)
 
+  // 새로고침을 누르면 서버가 새 initial 을 넘기지만, useState 는 최초 한 번만
+  // 쓰이므로 그대로 두면 30초 폴링 전까지 옛 값이 남는다. 바뀌면 즉시 반영한다.
+  const [seenInitial, setSeenInitial] = useState(initial)
+  if (initial !== seenInitial) {
+    setSeenInitial(initial)
+    if (initial) {
+      setData(initial)
+      setError(null)
+    }
+  }
+
   useEffect(() => {
     let cancelled = false
 
