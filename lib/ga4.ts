@@ -36,6 +36,7 @@ interface RunReportRequest {
 }
 
 interface RunReportResponse {
+  totals?: Array<{ metricValues: Array<{ value: string }> }>
   dimensionHeaders?: Array<{ name: string }>
   metricHeaders?: Array<{ name: string; type?: string }>
   rows?: Array<{
@@ -197,6 +198,8 @@ export async function getRealtime(pageLimit = 20): Promise<RealtimeResult> {
     runRealtimeReport({
       dimensions: [{ name: "minutesAgo" }],
       metrics: [{ name: "activeUsers" }],
+      // 중복 제거된 총합을 같은 요청에서 받아 호출 한 건을 아낀다.
+      metricAggregations: ["TOTAL"],
       limit: 30,
     }),
     runRealtimeReport({
@@ -215,12 +218,19 @@ export async function getRealtime(pageLimit = 20): Promise<RealtimeResult> {
     if (ago >= 0 && ago < 30) perMinute[29 - ago] = users
   }
 
+  // 총 활성 사용자는 분당 값의 단순 합이 아니라 중복 제거된 수다.
+  // metricAggregations 로 같은 요청의 totals 에서 받아 호출을 아낀다.
+  const aggregated = minutes.totals?.[0]?.metricValues?.[0]?.value
+  const activeUsers =
+    aggregated !== undefined
+      ? Number(aggregated) || 0
+      : Number(
+          (await runRealtimeReport({ metrics: [{ name: "activeUsers" }] }))
+            .rows?.[0]?.metricValues?.[0]?.value ?? 0
+        )
+
   return {
-    // 분 단위 합이 아니라 중복 제거된 사용자 수라서 따로 받아야 정확하다.
-    activeUsers: Number(
-      (await runRealtimeReport({ metrics: [{ name: "activeUsers" }] }))
-        .rows?.[0]?.metricValues?.[0]?.value ?? 0
-    ),
+    activeUsers,
     perMinute,
     pages: (pages.rows ?? []).map((row) => ({
       title: row.dimensionValues[0]?.value ?? "",

@@ -45,3 +45,6 @@ client_secret*.json
 .wrangler/
 worker-configuration.d.ts
 .cf-secrets.tmp.json
+
+# 글 작성 잡 상태 (/write)
+/.chain-jobs/

@@ -12,8 +12,14 @@ import {
 import { cn } from "@/lib/utils"
 import type { RealtimeResult } from "@/lib/ga4"
 
-/** 실시간 지표라 짧게 갱신한다. GA4 자체도 분 단위로 움직인다. */
-const POLL_MS = 30_000
+/**
+ * 실시간 지표지만 GA4 쿼터가 하루 한도라 너무 자주 부르면 바닥난다.
+ * 1분 주기로 두고, 탭이 보이지 않으면 아예 쉬게 한다.
+ */
+const POLL_MS = 60_000
+
+/** 쿼터 초과(429)를 만나면 한동안 멈춘다. */
+const BACKOFF_MS = 10 * 60_000
 
 const num = new Intl.NumberFormat("ko-KR")
 
@@ -34,29 +40,56 @@ export function RealtimePanel({ initial }: { initial: RealtimeResult | null }) {
 
   useEffect(() => {
     let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | null = null
 
-    const load = () => {
+    const schedule = (delay: number) => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(run, delay)
+    }
+
+    const run = () => {
+      // 보이지 않는 탭은 굳이 부르지 않는다. 쿼터를 가장 크게 아끼는 지점이다.
+      if (document.visibilityState !== "visible") {
+        schedule(POLL_MS)
+        return
+      }
+
       fetch("/api/ga4/realtime")
         .then(async (res) => {
           const body = await res.json()
-          if (!res.ok) throw new Error(body.error ?? "조회 실패")
+          if (!res.ok) {
+            const err = new Error(body.error ?? "조회 실패")
+            ;(err as Error & { status?: number }).status = res.status
+            throw err
+          }
           return body as RealtimeResult
         })
         .then((body) => {
           if (cancelled) return
           setData(body)
           setError(null)
+          schedule(POLL_MS)
         })
-        .catch((e: Error) => {
+        .catch((e: Error & { status?: number }) => {
+          if (cancelled) return
           // 일시적 실패로 화면을 비우지 않고, 직전 값을 그대로 둔다.
-          if (!cancelled) setError(e.message)
+          setError(e.message)
+          schedule(e.status === 429 ? BACKOFF_MS : POLL_MS)
         })
     }
 
-    const id = setInterval(load, POLL_MS)
+    schedule(POLL_MS)
+
+    // 탭으로 돌아오면 곧바로 한 번 받아 최신 상태로 맞춘다.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") schedule(0)
+    }
+    document.addEventListener("visibilitychange", onVisible)
+
     return () => {
       cancelled = true
-      clearInterval(id)
+      if (timer) clearTimeout(timer)
+      document.removeEventListener("visibilitychange", onVisible)
     }
   }, [])
 
@@ -69,7 +102,7 @@ export function RealtimePanel({ initial }: { initial: RealtimeResult | null }) {
         <h2 className="text-lg font-semibold tracking-tight">실시간</h2>
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span className="inline-block size-[5px] shrink-0 animate-pulse rounded-full bg-emerald-500" />
-          30초마다 갱신
+          1분마다 갱신
         </span>
       </div>
 
