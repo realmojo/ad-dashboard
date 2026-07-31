@@ -55,7 +55,6 @@ export async function NaverAdBody({
     { impCnt: 0, clkCnt: 0, salesAmt: 0 }
   )
   const cpc = total.clkCnt > 0 ? total.salesAmt / total.clkCnt : 0
-  const ctr = total.impCnt > 0 ? (total.clkCnt / total.impCnt) * 100 : 0
   const adgroups = campaigns.flatMap((c) => c.adgroups)
 
   return (
@@ -87,7 +86,6 @@ export async function NaverAdBody({
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatTile label="노출수" value={won.format(total.impCnt)} />
             <StatTile label="클릭수" value={won.format(total.clkCnt)} />
-            <StatTile label="클릭률" value={`${ctr.toFixed(2)}%`} />
             <StatTile
               label="평균 CPC"
               value={`${won.format(Math.round(cpc))}원`}
