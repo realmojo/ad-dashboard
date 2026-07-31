@@ -604,3 +604,53 @@ export async function getPowerLinkCampaigns(
     period: { since, until },
   }
 }
+
+export interface FlatKeyword {
+  platform: "naver" | "kakao"
+  /** 어느 광고그룹의 키워드인지 */
+  adgroupId: string
+  adgroupName: string
+  keywordId: string
+  keyword: string
+  bidAmt: number
+  useGroupBidAmt: boolean
+  status: string
+  statusReason?: string
+  inspectStatus?: string
+  userLock: boolean
+  qiGrade?: number
+}
+
+/**
+ * 모든 광고그룹의 키워드를 한 번에 모은다.
+ * 광고그룹 수만큼 호출이 필요해(일괄 조회 API 없음) 요청 간격 게이트에 맡긴다.
+ */
+export async function getAllKeywords(): Promise<FlatKeyword[]> {
+  const campaigns = (await getCampaigns()).filter(
+    (c) => c.campaignTp === "WEB_SITE"
+  )
+
+  const adgroups = (
+    await Promise.all(campaigns.map((c) => getAdGroups(c.nccCampaignId)))
+  ).flat()
+
+  const perGroup = await mapWithConcurrency(adgroups, 3, async (group) => {
+    const keywords = await getKeywords(group.nccAdgroupId).catch(() => [])
+    return keywords.map((keyword): FlatKeyword => ({
+      platform: "naver",
+      adgroupId: group.nccAdgroupId,
+      adgroupName: group.name,
+      keywordId: keyword.nccKeywordId,
+      keyword: keyword.keyword,
+      bidAmt: keyword.bidAmt,
+      useGroupBidAmt: keyword.useGroupBidAmt,
+      status: keyword.status,
+      statusReason: keyword.statusReason,
+      inspectStatus: keyword.inspectStatus,
+      userLock: keyword.userLock,
+      qiGrade: keyword.nccQi?.qiGrade,
+    }))
+  })
+
+  return perGroup.flat()
+}

@@ -288,3 +288,34 @@ export async function getKakaoCampaigns(
 
   return { campaigns: result, period: { since: date, until: date } }
 }
+
+import type { FlatKeyword } from "@/lib/naver-ad"
+
+/** 카카오의 모든 광고그룹 키워드. 형태는 네이버와 맞춘다. */
+export async function getAllKakaoKeywords(): Promise<FlatKeyword[]> {
+  const campaigns = await getCampaigns()
+  const adgroups = (
+    await Promise.all(campaigns.map((c) => getAdGroups(c.id)))
+  ).flat()
+
+  const perGroup: FlatKeyword[][] = []
+  for (const group of adgroups) {
+    const keywords = await getKeywords(group.id).catch(() => [])
+    perGroup.push(
+      keywords.map((keyword) => ({
+        platform: "kakao" as const,
+        adgroupId: group.id,
+        adgroupName: group.name,
+        keywordId: keyword.id,
+        keyword: keyword.text,
+        bidAmt: keyword.bidStrategy?.bidAmount ?? 0,
+        useGroupBidAmt: !keyword.bidStrategy?.bidAmount,
+        status: keyword.config === "ON" ? "ELIGIBLE" : "PAUSED",
+        statusReason: keyword.status?.[0],
+        inspectStatus: keyword.reviewStatus,
+        userLock: keyword.config !== "ON",
+      }))
+    )
+  }
+  return perGroup.flat()
+}

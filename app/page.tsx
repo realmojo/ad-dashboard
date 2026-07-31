@@ -4,6 +4,7 @@ import { AdSensePanel } from "@/components/adsense-panel"
 import { DatePicker } from "@/components/date-picker"
 import { SearchAdSection } from "@/components/search-ad-section"
 import { ProfitSummary } from "@/components/profit-summary"
+import { AllKeywordsSection } from "@/components/all-keywords-section"
 import { RealtimeSection } from "@/components/realtime-section"
 import { LoginScreen } from "@/components/login-screen"
 import { RefreshControl } from "@/components/refresh-control"
@@ -70,9 +71,19 @@ export default async function Page({
       {/* 2:4:4 분할. 각 패널은 독립적으로 스트리밍되어 한쪽이 느려도 다른 쪽이 먼저 표시된다. */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-10">
         <div className="min-w-0 lg:col-span-2">
-          <Suspense fallback={<PanelSkeleton title="실시간" />}>
-            <RealtimeSection />
-          </Suspense>
+          <div className="space-y-4">
+            <Suspense fallback={<PanelSkeleton title="실시간" />}>
+              <RealtimeSection />
+            </Suspense>
+            {/* 광고그룹 수만큼 호출이 필요해 느리므로 따로 스트리밍한다. */}
+            <Suspense
+              fallback={
+                <div className="h-64 animate-pulse rounded-xl bg-muted" />
+              }
+            >
+              <AllKeywordsSection />
+            </Suspense>
+          </div>
         </div>
         {/* key 에 날짜를 넣어 날짜가 바뀌면 스켈레톤부터 다시 보이게 한다. */}
         <div className="min-w-0 lg:col-span-4">
