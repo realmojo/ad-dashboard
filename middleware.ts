@@ -25,10 +25,12 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/powerlink/:path*",
+    "/naver-search/:path*",
     "/adsense/:path*",
     "/write/:path*",
     "/api/naver-ad/:path*",
     "/api/adsense/:path*",
+    "/api/naver-search/:path*",
     // 실제 사이트에 글을 올리는 경로라 반드시 잠근다.
     "/api/write/:path*",
   ],
