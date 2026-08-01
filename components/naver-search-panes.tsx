@@ -1,11 +1,13 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { RefreshCw, Search } from "lucide-react"
 
+import { SearchHistoryPanel } from "@/components/search-history-panel"
 import { buildNaverSearchUrl, type SearchDevice } from "@/lib/naver-search-url"
+import { pushHistory } from "@/lib/search-history"
 import { cn } from "@/lib/utils"
 
 /**
@@ -37,6 +39,8 @@ export function NaverSearchPanes({ initialQuery }: { initialQuery: string }) {
   const submit = (next: string) => {
     const trimmed = next.trim()
     if (!trimmed) return
+    // 기록에서 고른 경우에도 입력창이 지금 보고 있는 검색어를 가리키게 한다.
+    setInput(trimmed)
     setQuery(trimmed)
     setReloadKey((n) => n + 1)
     // 새로고침하거나 공유해도 같은 검색어가 열리도록 주소에 남긴다.
@@ -44,6 +48,12 @@ export function NaverSearchPanes({ initialQuery }: { initialQuery: string }) {
       scroll: false,
     })
   }
+
+  // 기록은 여기 한 곳에서 남긴다. 직접 검색하든, 기록에서 다시 누르든,
+  // 주소에 ?q= 를 달고 들어오든 전부 이 자리를 지난다.
+  useEffect(() => {
+    if (query) pushHistory(query)
+  }, [query])
 
   // 화면에 그리는 건 중계를 거치지만,
   // 새 탭은 네이버 실제 주소로 연다.
@@ -98,15 +108,16 @@ export function NaverSearchPanes({ initialQuery }: { initialQuery: string }) {
         </Link>
       </form>
 
-      {!query ? (
-        <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed">
-          <p className="text-sm text-muted-foreground">
-            검색어를 입력하면 PC · 모바일 결과를 나란히 보여줍니다.
-          </p>
-        </div>
-      ) : (
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
-          {(
+      {/* PC · 모바일 · 검색 기록. 기록은 검색 전에도 자리를 지킨다. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+        {!query ? (
+          <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed p-6">
+            <p className="text-center text-sm text-muted-foreground">
+              검색어를 입력하면 PC · 모바일 결과를 나란히 보여줍니다.
+            </p>
+          </div>
+        ) : (
+          (
             [
               { device: "pc", label: "PC" },
               { device: "mobile", label: "모바일" },
@@ -116,8 +127,10 @@ export function NaverSearchPanes({ initialQuery }: { initialQuery: string }) {
               key={device}
               className={cn(
                 "flex min-h-0 flex-col overflow-hidden rounded-lg border",
-                // 모바일 결과는 실제 폭에 가깝게 좁혀 보여 준다.
-                device === "mobile" && "mx-auto w-full max-w-[26rem] lg:mx-0"
+                device === "pc"
+                  ? "flex-1"
+                  : // 모바일 결과는 실제 폭에 가깝게 좁혀 보여 준다.
+                    "w-full shrink-0 lg:w-[26rem]"
               )}
             >
               <div className="flex items-center justify-between border-b px-3 py-2">
@@ -139,9 +152,11 @@ export function NaverSearchPanes({ initialQuery }: { initialQuery: string }) {
                 className="min-h-0 flex-1 bg-white"
               />
             </section>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+
+        <SearchHistoryPanel current={query} onPick={submit} />
+      </div>
     </>
   )
 }
