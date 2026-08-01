@@ -10,8 +10,12 @@ function ThemeProvider({
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme="system"
-      enableSystem
+      // 기본은 다크로 둔다. 운영체제 설정은 따르지 않는다.
+      // d 키로는 여전히 밝게 바꿀 수 있고, 그 선택은 저장된다.
+      defaultTheme="dark"
+      enableSystem={false}
+      // 예전에 저장해 둔 취향(system·light)을 한 번 비우기 위해 키를 바꿨다.
+      storageKey="ad-dashboard-theme"
       disableTransitionOnChange
       {...props}
     >

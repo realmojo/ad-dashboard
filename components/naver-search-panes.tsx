@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
+import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { RefreshCw, Search } from "lucide-react"
 
@@ -85,6 +86,13 @@ export function NaverSearchPanes({ initialQuery }: { initialQuery: string }) {
         >
           <RefreshCw className="size-4" aria-hidden />
         </button>
+        {/* 제목 줄을 없앴으므로 돌아가는 길은 여기에 둔다. */}
+        <Link
+          href="/"
+          className="flex h-10 shrink-0 items-center rounded-md border px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          대시보드
+        </Link>
       </form>
 
       {!query ? (
