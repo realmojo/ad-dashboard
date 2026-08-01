@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 
+import { buildNaverSearchUrl } from "@/lib/naver-search-url"
+
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
@@ -16,13 +18,6 @@ const UA = {
     "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
 }
 
-function buildUrl(query: string, device: "pc" | "mobile") {
-  const q = encodeURIComponent(query)
-  return device === "pc"
-    ? `https://search.naver.com/search.naver?where=nexearch&sm=top_hty&fbm=0&ie=utf8&query=${q}`
-    : `https://m.search.naver.com/search.naver?sm=mtp_hty.top&where=m&query=${q}`
-}
-
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const query = searchParams.get("q")?.trim()
@@ -35,7 +30,7 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const target = buildUrl(query, device)
+  const target = buildNaverSearchUrl(query, device)
 
   try {
     const response = await fetch(target, {

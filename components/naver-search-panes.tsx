@@ -5,6 +5,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { RefreshCw, Search } from "lucide-react"
 
+import { buildNaverSearchUrl, type SearchDevice } from "@/lib/naver-search-url"
 import { cn } from "@/lib/utils"
 
 /**
@@ -44,7 +45,9 @@ export function NaverSearchPanes({ initialQuery }: { initialQuery: string }) {
     })
   }
 
-  const src = (device: "pc" | "mobile") =>
+  // 화면에 그리는 건 중계를 거치지만,
+  // 새 탭은 네이버 실제 주소로 연다.
+  const src = (device: SearchDevice) =>
     `/api/naver-search?q=${encodeURIComponent(query)}&device=${device}`
 
   return (
@@ -120,9 +123,10 @@ export function NaverSearchPanes({ initialQuery }: { initialQuery: string }) {
               <div className="flex items-center justify-between border-b px-3 py-2">
                 <span className="text-xs font-medium">{label}</span>
                 <a
-                  href={src(device)}
+                  href={buildNaverSearchUrl(query, device)}
                   target="_blank"
                   rel="noreferrer"
+                  title="네이버에서 직접 열기"
                   className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
                 >
                   새 탭
