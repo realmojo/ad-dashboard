@@ -4,7 +4,9 @@
  *   npm run sheet:keywords                 시트에 바로 쓴다
  *   npm run sheet:keywords -- --dry-run    쓰지 않고 TSV 파일만 만든다
  *
- * 열: 광고그룹 · 키워드 · 노출수(PC) · 노출수(MO) · 현재상태 · 링크
+ * 열: 광고그룹 · 키워드 · 노출수(PC) · 노출수(MO) · 중요도 · 현재상태 · 링크
+ *
+ * 중요도는 PC+MO 합에 따라 색이 다른 별표 하나다.
  *
  * 노출수는 keywordegg 가 주는 월간 검색량이다. 검색광고 API 의 노출수가
  * 아니다. 그쪽은 PC/모바일을 나눠 주는 기간이 최근 7일까지로 막혀 있다.
@@ -22,9 +24,20 @@ const HEADER = [
   "키워드",
   "노출수(PC)",
   "노출수(MO)",
+  "중요도",
   "현재상태",
   "링크",
 ]
+const LAST_COLUMN = "G"
+// 중요도 열(E)의 별표 색. PC+MO 합이 어느 구간에 드는지로 고른다.
+const STAR_TIERS = [
+  { min: 50000, color: "#1aa34a", label: "5만 이상" },
+  { min: 10000, color: "#2b6cff", label: "1만 이상" },
+  { min: 5000, color: "#f57c00", label: "5천 이상" },
+  { min: 100, color: "#e6b800", label: "100 이상" },
+  { min: 0, color: "#e04040", label: "100 미만" },
+]
+const STAR = "★"
 
 const NAVER_BASE = "https://api.searchad.naver.com"
 const EGG_BASE = "https://keywordegg.com/keywordegg/getSingleKeyword"
@@ -108,7 +121,9 @@ async function naver(path, search) {
   })
 
   if (!response.ok) {
-    throw new Error(`${path} → HTTP ${response.status} ${await response.text()}`)
+    throw new Error(
+      `${path} → HTTP ${response.status} ${await response.text()}`
+    )
   }
   return response.json()
 }
@@ -236,7 +251,9 @@ async function googleToken() {
 
   const body = await response.json()
   if (!body.access_token) {
-    console.error(`구글 토큰 발급 실패: ${body.error_description ?? body.error}`)
+    console.error(
+      `구글 토큰 발급 실패: ${body.error_description ?? body.error}`
+    )
     process.exit(1)
   }
 
@@ -252,6 +269,20 @@ async function googleToken() {
   }
 
   return body.access_token
+}
+
+function starTier(total) {
+  return STAR_TIERS.find((tier) => total >= tier.min) ?? STAR_TIERS.at(-1)
+}
+
+/** "#1aa34a" → 시트가 받는 0~1 사이의 rgb. */
+function rgbColor(hex) {
+  const value = parseInt(hex.slice(1), 16)
+  return {
+    red: ((value >> 16) & 255) / 255,
+    green: ((value >> 8) & 255) / 255,
+    blue: (value & 255) / 255,
+  }
 }
 
 async function sheets(token, path, init = {}) {
@@ -308,7 +339,8 @@ async function main() {
 
       // 소재의 랜딩 주소. 그룹 안에서는 대개 하나로 같다.
       const link =
-        ads.find((a) => a.ad?.pc?.final || a.ad?.mobile?.final)?.ad?.pc?.final ??
+        ads.find((a) => a.ad?.pc?.final || a.ad?.mobile?.final)?.ad?.pc
+          ?.final ??
         ads.find((a) => a.ad?.mobile?.final)?.ad?.mobile?.final ??
         ""
 
@@ -332,17 +364,30 @@ async function main() {
 
   const volumes = await fetchAllVolumes([...keywordSet])
 
+  const tiers = []
   const values = rows.map((row) => {
     const volume = volumes[row.keyword]
+    const tier = starTier((volume?.pc ?? 0) + (volume?.mobile ?? 0))
+    tiers.push(tier)
+
     return [
       row.adgroup,
       row.keyword,
       volume ? volume.pc : "",
       volume ? volume.mobile : "",
+      STAR,
       row.state,
       row.link,
     ]
   })
+
+  const spread = new Map()
+  for (const tier of tiers)
+    spread.set(tier.label, (spread.get(tier.label) ?? 0) + 1)
+  console.log("중요도:")
+  for (const tier of STAR_TIERS) {
+    console.log(`  ${tier.label.padEnd(8)} ${spread.get(tier.label) ?? 0}줄`)
+  }
 
   if (DRY_RUN) {
     const path = join(ROOT, "keywords.tsv")
@@ -371,16 +416,52 @@ async function main() {
   console.log(`\n시트: ${title} (gid=${SHEET_GID})`)
 
   // 머리글은 직접 세팅해 둔 것을 그대로 두고, 아래 내용만 갈아 끼운다.
-  await sheets(token, `/values/${encodeURIComponent(`${quoted}!A2:F`)}:clear`, {
-    method: "POST",
-    body: "{}",
-  })
+  await sheets(
+    token,
+    `/values/${encodeURIComponent(`${quoted}!A2:${LAST_COLUMN}`)}:clear`,
+    { method: "POST", body: "{}" }
+  )
 
   await sheets(
     token,
     `/values/${encodeURIComponent(`${quoted}!A2`)}?valueInputOption=RAW`,
     { method: "PUT", body: JSON.stringify({ values }) }
   )
+
+  // 별표 색은 값이 아니라 서식이라 따로 입힌다.
+  await sheets(token, ":batchUpdate", {
+    method: "POST",
+    body: JSON.stringify({
+      requests: [
+        {
+          updateCells: {
+            range: {
+              sheetId: SHEET_GID,
+              startRowIndex: 1,
+              endRowIndex: 1 + tiers.length,
+              startColumnIndex: 4, // E
+              endColumnIndex: 5,
+            },
+            rows: tiers.map((tier) => ({
+              values: [
+                {
+                  userEnteredFormat: {
+                    horizontalAlignment: "CENTER",
+                    textFormat: {
+                      bold: true,
+                      foregroundColorStyle: { rgbColor: rgbColor(tier.color) },
+                    },
+                  },
+                },
+              ],
+            })),
+            fields:
+              "userEnteredFormat(horizontalAlignment,textFormat(bold,foregroundColorStyle))",
+          },
+        },
+      ],
+    }),
+  })
 
   console.log(`${values.length}줄을 저장했습니다.`)
   console.log(
