@@ -14,10 +14,15 @@ import { spawn } from "node:child_process";
 const ROOT = process.cwd();
 const PORT = 5813;
 const REDIRECT_URI = `http://localhost:${PORT}`;
-// 애드센스(수익) + GA4(페이지별 지표) 둘 다 읽는다.
+// 애드센스(수익) · GA4(페이지별 지표) 를 읽고, 스프레드시트에는 쓴다.
+//
+// refresh token 은 발급받던 순간의 스코프를 그대로 들고 다닌다.
+// 콘솔에서 API 를 켜거나 동의 화면에 스코프를 추가해도 기존 토큰은 그대로다.
+// 여기를 고쳤으면 반드시 인증을 다시 받아야 한다.
 const SCOPE = [
   "https://www.googleapis.com/auth/adsense.readonly",
   "https://www.googleapis.com/auth/analytics.readonly",
+  "https://www.googleapis.com/auth/spreadsheets",
 ].join(" ");
 
 function loadClient() {

@@ -48,3 +48,7 @@ worker-configuration.d.ts
 
 # 글 작성 잡 상태 (/write)
 /.chain-jobs/
+
+# keywordegg 검색량 캐시
+.cache/
+keywords.tsv
