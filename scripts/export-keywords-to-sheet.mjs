@@ -4,7 +4,8 @@
  *   npm run sheet:keywords                 시트에 바로 쓴다
  *   npm run sheet:keywords -- --dry-run    쓰지 않고 TSV 파일만 만든다
  *
- * 열: 광고그룹 · 키워드 · 노출수(PC) · 노출수(MO) · 중요도 · 입찰가 · 현재상태 · 링크
+ * 열: 광고그룹 · 키워드 · 노출수(PC) · 노출수(MO) · 중요도 · 입찰가 ·
+ *     노출순위 · 현재상태 · 링크
  *
  * 중요도는 PC+MO 합에 따라 색이 다른 별표 하나다.
  *
@@ -26,10 +27,14 @@ const HEADER = [
   "노출수(MO)",
   "중요도",
   "입찰가",
+  "노출순위",
   "현재상태",
   "링크",
 ]
-const LAST_COLUMN = "H"
+const LAST_COLUMN = "I"
+// 노출순위를 뽑을 기간. 오늘까지 며칠치를 평균낼지.
+const RANK_DAYS = 7
+const STAT_CHUNK = 100
 // 중요도 열(E)의 별표 색. PC+MO 합이 어느 구간에 드는지로 고른다.
 const STAR_TIERS = [
   { min: 50000, color: "#1aa34a", label: "5만 이상" },
@@ -156,6 +161,44 @@ function keywordState(keyword) {
     default:
       return keyword.statusReason ?? "노출 불가"
   }
+}
+
+/** 한국 날짜 기준 n일 전. "2026-08-07" 꼴. */
+function seoulDate(daysAgo = 0) {
+  const now = new Date(Date.now() + 9 * 60 * 60 * 1000)
+  now.setUTCDate(now.getUTCDate() - daysAgo)
+  return now.toISOString().slice(0, 10)
+}
+
+/**
+ * 키워드별 평균 노출순위(avgRnk).
+ *
+ * 광고가 검색결과에서 몇 번째에 떴는지의 평균이라 1.0 에 가까울수록 위다.
+ * 그날그날 다르므로 최근 며칠을 묶어 본다. 노출이 아예 없었으면 값이 없다.
+ */
+async function fetchRanks(ids) {
+  const since = seoulDate(RANK_DAYS - 1)
+  const until = seoulDate(0)
+  const ranks = new Map()
+
+  for (let i = 0; i < ids.length; i += STAT_CHUNK) {
+    const chunk = ids.slice(i, i + STAT_CHUNK)
+    const search = new URLSearchParams()
+    for (const id of chunk) search.append("ids", id)
+    search.set("fields", JSON.stringify(["avgRnk", "impCnt"]))
+    search.set("timeRange", JSON.stringify({ since, until }))
+
+    const body = await naver("/stats", search.toString())
+    for (const row of body.data ?? []) {
+      // 노출이 없으면 순위도 의미가 없다.
+      if (row.impCnt > 0 && row.avgRnk > 0) ranks.set(row.id, row.avgRnk)
+    }
+  }
+
+  console.log(
+    `노출순위: ${since} ~ ${until} · ${ranks.size}/${ids.length}개에 값이 있음`
+  )
+  return ranks
 }
 
 /* ── keywordegg 검색량 ────────────────────────────────────────────── */
@@ -348,6 +391,7 @@ async function main() {
       for (const keyword of keywords) {
         keywordSet.add(keyword.keyword)
         rows.push({
+          id: keyword.nccKeywordId,
           adgroup: adgroup.name,
           keyword: keyword.keyword,
           // 키워드마다 값을 따로 준 것도 있고 그룹 값을 물려받는 것도 있다.
@@ -367,6 +411,7 @@ async function main() {
 
   console.log(`키워드 ${rows.length}줄 (중복 없는 키워드 ${keywordSet.size}개)`)
 
+  const ranks = await fetchRanks(rows.map((r) => r.id))
   const volumes = await fetchAllVolumes([...keywordSet])
 
   const tiers = []
@@ -382,6 +427,7 @@ async function main() {
       volume ? volume.mobile : "",
       STAR,
       row.bid ?? "",
+      ranks.get(row.id) ?? "",
       row.state,
       row.link,
     ]
