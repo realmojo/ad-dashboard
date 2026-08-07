@@ -4,7 +4,7 @@
  *   npm run sheet:keywords                 시트에 바로 쓴다
  *   npm run sheet:keywords -- --dry-run    쓰지 않고 TSV 파일만 만든다
  *
- * 열: 광고그룹 · 키워드 · 노출수(PC) · 노출수(MO) · 중요도 · 현재상태 · 링크
+ * 열: 광고그룹 · 키워드 · 노출수(PC) · 노출수(MO) · 중요도 · 입찰가 · 현재상태 · 링크
  *
  * 중요도는 PC+MO 합에 따라 색이 다른 별표 하나다.
  *
@@ -25,10 +25,11 @@ const HEADER = [
   "노출수(PC)",
   "노출수(MO)",
   "중요도",
+  "입찰가",
   "현재상태",
   "링크",
 ]
-const LAST_COLUMN = "G"
+const LAST_COLUMN = "H"
 // 중요도 열(E)의 별표 색. PC+MO 합이 어느 구간에 드는지로 고른다.
 const STAR_TIERS = [
   { min: 50000, color: "#1aa34a", label: "5만 이상" },
@@ -349,6 +350,10 @@ async function main() {
         rows.push({
           adgroup: adgroup.name,
           keyword: keyword.keyword,
+          // 키워드마다 값을 따로 준 것도 있고 그룹 값을 물려받는 것도 있다.
+          // 실제로 적용되는 쪽을 넣는다.
+          bid: keyword.useGroupBidAmt ? adgroup.bidAmt : keyword.bidAmt,
+          fromGroup: Boolean(keyword.useGroupBidAmt),
           state: keywordState(keyword),
           link,
         })
@@ -376,10 +381,16 @@ async function main() {
       volume ? volume.pc : "",
       volume ? volume.mobile : "",
       STAR,
+      row.bid ?? "",
       row.state,
       row.link,
     ]
   })
+
+  const fromGroup = rows.filter((r) => r.fromGroup).length
+  console.log(
+    `입찰가: 키워드별 ${rows.length - fromGroup}줄 · 그룹값 물려받음 ${fromGroup}줄`
+  )
 
   const spread = new Map()
   for (const tier of tiers)
@@ -415,17 +426,18 @@ async function main() {
   const quoted = `'${title.replace(/'/g, "''")}'`
   console.log(`\n시트: ${title} (gid=${SHEET_GID})`)
 
-  // 머리글은 직접 세팅해 둔 것을 그대로 두고, 아래 내용만 갈아 끼운다.
   await sheets(
     token,
-    `/values/${encodeURIComponent(`${quoted}!A2:${LAST_COLUMN}`)}:clear`,
+    `/values/${encodeURIComponent(`${quoted}!A1:${LAST_COLUMN}`)}:clear`,
     { method: "POST", body: "{}" }
   )
 
+  // 열이 늘어날 때마다 손으로 맞추지 않게 머리글도 여기서 쓴다.
+  // 값만 쓰므로 머리글에 입혀 둔 서식은 그대로 남는다.
   await sheets(
     token,
-    `/values/${encodeURIComponent(`${quoted}!A2`)}?valueInputOption=RAW`,
-    { method: "PUT", body: JSON.stringify({ values }) }
+    `/values/${encodeURIComponent(`${quoted}!A1`)}?valueInputOption=RAW`,
+    { method: "PUT", body: JSON.stringify({ values: [HEADER, ...values] }) }
   )
 
   // 별표 색은 값이 아니라 서식이라 따로 입힌다.
