@@ -113,14 +113,10 @@ export async function AdSensePanel({ date }: { date?: string } = {}) {
     getUsdKrwRate().catch(() => null),
   ])
 
-  // 이 두 개는 표로 펼쳐 보여주고, 나머지는 이름만 나열한다.
+  // 이 두 개만 표로 펼쳐 보여준다. 나머지 저장된 보고서는 쓰지 않는다.
   const featured = FEATURED_REPORT_TITLES.map((title) =>
     savedReports.find((report) => report.title === title)
   ).filter((report): report is SavedReport => report !== undefined)
-  const featuredNames = new Set(featured.map((report) => report.name))
-  const otherReports = savedReports.filter(
-    (report) => !featuredNames.has(report.name)
-  )
 
   const metricNames = METRIC_ORDER.filter((name) => totals && name in totals)
   // 좁은 칼럼이라 표에는 핵심 지표만 노출한다.
@@ -240,26 +236,6 @@ export async function AdSensePanel({ date }: { date?: string } = {}) {
             <Ga4PagesCard date={date ?? todayInSeoul()} hosts={GA4_HOSTS} />
           </Suspense>
 
-          {otherReports.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">그 외 저장된 보고서</CardTitle>
-                <CardDescription>{otherReports.length}개</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-sm">
-                  {otherReports.map((report) => (
-                    <li
-                      key={report.name}
-                      className="border-b pb-2 last:border-0"
-                    >
-                      {report.title}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          ) : null}
           {bySite.length > 0 ? (
             <Card>
               <CardHeader>
