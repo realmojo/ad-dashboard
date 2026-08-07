@@ -19,7 +19,8 @@
     "kakao:auth": "node scripts/kakao-auth.mjs",
     "chain:selftest": "node --import ./scripts/ts-alias.mjs scripts/chain-selftest.ts",
     "chain:agent-check": "node --import ./scripts/ts-alias.mjs scripts/chain-agent-check.ts",
-    "sheet:keywords": "node scripts/export-keywords-to-sheet.mjs"
+    "sheet:keywords": "node scripts/export-keywords-to-sheet.mjs",
+    "gh:secrets": "node scripts/push-gh-secrets.mjs"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.220",

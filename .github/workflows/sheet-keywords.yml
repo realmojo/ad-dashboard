@@ -1,0 +1,39 @@
+name: 키워드 시트 갱신
+
+# 매시 정각. 크론은 UTC 지만 한국과 시차가 정확히 9시간이라
+# 분 단위가 같아 정각은 정각이다.
+#
+# 깃허브 예약 실행은 붐빌 때 몇 분에서 십몇 분까지 밀린다. 시간을 다투는
+# 값이 아니라 그대로 둔다. 네이버 오늘치 집계도 한 시간쯤 늦게 따라온다.
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+# 앞 실행이 아직 돌고 있으면 겹쳐 쓰지 않는다.
+concurrency:
+  group: sheet-keywords
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # 이 스크립트는 node 기본 모듈만 쓴다. npm ci 가 필요 없다.
+      - name: 시트 갱신
+        run: node scripts/export-keywords-to-sheet.mjs --force
+        env:
+          NAVER_ACCESS_LICENSE: ${{ secrets.NAVER_ACCESS_LICENSE }}
+          NAVER_SECRET_KEY: ${{ secrets.NAVER_SECRET_KEY }}
+          NAVER_CUSTOMER_ID: ${{ secrets.NAVER_CUSTOMER_ID }}
+          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+          ADSENSE_REFRESH_TOKEN: ${{ secrets.ADSENSE_REFRESH_TOKEN }}
